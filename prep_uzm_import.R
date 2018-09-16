@@ -74,11 +74,16 @@ rm(uzmTrackInfo_std, uzmTrackInfo_nonStd)
 uzmTrackInfo %<>% 
   mutate(albumnaam = str_replace_all(albumnaam, pattern = "_", replacement = " "))
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+# Knip het schijfnummer uit de albumnaam. 
 # 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-temp1 <- uzmTrackInfo %>% 
-  filter(str_detect(albumnaam, "(dis[ck]|CD)[- \\)\\}\\]]?\\d") 
-         & !str_detect(diskNr_trackNr, "-")
-         & !str_detect(czID, "-")) %>% 
-  mutate(diskNr_a = sub("^.*(cd[- ]?(\\d+)|dis[ck] ?(\\d+)).*$", "\\2\\3", albumnaam, perl=TRUE, ignore.case=TRUE))
+# Voorbeeld: v1 <- getDiskNr_in_albumNaam(c("CD-1", "Beethoven", "cd2", "Fantasy [Disc 3]"))
+#            v1 : "1" NA  "2" "3"
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+getDiskNr_in_albumNaam <- function(albumnaam){
+  result <- sub("^.*(cd[- ]?(\\d+)|dis[ck] ?(\\d+)).*$", "\\2\\3", albumnaam, perl=TRUE, ignore.case=TRUE)
+  ifelse(result == albumnaam, NA, result)
+}
+
+uzmTrackInfo %<>% 
+  mutate(diskNr_in_albumnaam = getDiskNr_in_albumNaam(albumnaam))
