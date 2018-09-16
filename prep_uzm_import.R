@@ -39,12 +39,46 @@ uzmTrackInfo %<>%
   filter(str_detect(dir, pattern = "^((?!\\!WERELDMUZIEK).)*$")) # negative lookahead
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Isoleer de "happy case" czID's en tracknummers.
-# In de "sad case" gaat het om een cd-box; schijfnummers daarvan zijn niet eenduidig geregistreerd in
-# Filemaker. Een cd-box wordt daarom niet meegenomen.
+# Isoleer de czID's en tracknummers. Behoud alleen die track-info's waarbij dat lukt.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
-  mutate(czID = sub("^.*/C((\\d+(-\\d{1,2})?)|(\\d+)[ _]).*$", "\\2", dir, perl=TRUE)) %>% 
-  mutate(trackNr = sub("^((\\d{1,3}) |(\\d{1,3}-\\d{1,3}) |(\\d{1,3})-\\D).*$", "\\2\\3\\4", track, perl=TRUE)) 
-  # filter(nchar(czID) < 7 | nchar(trackNr) < 7)
+  mutate(czID_albumnaam = sub("^.*/C0*(\\d+( ?(-|CD) ?\\d+)?)( |_ )(.*)$", "\\1¶\\5", dir, perl=TRUE)) %>% 
+  mutate(diskNr_trackNr = sub("^((\\d{1,3}) |(\\d{1,3}-\\d{1,3}) |(\\d{1,3})-\\D).*$", "\\2\\3\\4", track, perl=TRUE)) %>% 
+  filter(track != diskNr_trackNr & dir != czID_albumnaam)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Scheid czID en albumnaam
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+uzmTrackInfo %<>% 
+  separate(czID_albumnaam, c("czID", "albumnaam"), sep = "¶")
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Splits track-info in 2 stukken: met en zonder standaard czID. Vb. van std: 123, 123-1, 123-10
+# Normaliseer vervolgens de non-std czID's en voeg ze weer samen
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+uzmTrackInfo_std <- 
+  filter(uzmTrackInfo, str_detect(czID, "^\\d+(-\\d+)?$"))
+
+uzmTrackInfo_nonStd <- 
+  filter(uzmTrackInfo, !str_detect(czID, "^\\d+(-\\d+)?$")) %>% 
+  mutate(czID = str_replace_all(czID, pattern = " ", replacement = ""),
+         czID = str_replace_all(czID, pattern = "CD", replacement = "-")) 
+
+uzmTrackInfo <- bind_rows(uzmTrackInfo_std, uzmTrackInfo_nonStd)
+
+rm(uzmTrackInfo_std, uzmTrackInfo_nonStd)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Albumnaam verfraaien
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+uzmTrackInfo %<>% 
+  mutate(albumnaam = str_replace_all(albumnaam, pattern = "_", replacement = " "))
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+temp1 <- uzmTrackInfo %>% 
+  filter(str_detect(albumnaam, "(dis[ck]|CD)[- \\)\\}\\]]?\\d") 
+         & !str_detect(diskNr_trackNr, "-")
+         & !str_detect(czID, "-")) %>% 
+  mutate(diskNr_a = sub("^.*(cd[- ]?(\\d+)|dis[ck] ?(\\d+)).*$", "\\2\\3", albumnaam, perl=TRUE, ignore.case=TRUE))
