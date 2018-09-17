@@ -44,7 +44,7 @@ uzmTrackInfo %<>%
 uzmTrackInfo %<>% 
   mutate(czID_albumnaam = sub("^.*/C0*(\\d+( ?(-|CD) ?\\d+)?)( |_ )(.*)$", "\\1¶\\5", dir, perl=TRUE)) %>% 
   mutate(diskNr_trackNr = sub("^((\\d{1,3}) |(\\d{1,3}-\\d{1,3}) |(\\d{1,3})-\\D).*$", "\\2\\3\\4", track, perl=TRUE)) %>% 
-  filter(track != diskNr_trackNr & dir != czID_albumnaam)
+  filter(czID_albumnaam != dir & diskNr_trackNr != track)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Scheid czID en albumnaam
@@ -56,34 +56,23 @@ uzmTrackInfo %<>%
 # Splits track-info in 2 stukken: met en zonder standaard czID. Vb. van std: 123, 123-1, 123-10
 # Normaliseer vervolgens de non-std czID's en voeg ze weer samen
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-uzmTrackInfo_std <- 
-  filter(uzmTrackInfo, str_detect(czID, "^\\d+(-\\d+)?$"))
-
-uzmTrackInfo_nonStd <- 
-  filter(uzmTrackInfo, !str_detect(czID, "^\\d+(-\\d+)?$")) %>% 
-  mutate(czID = str_replace_all(czID, pattern = " ", replacement = ""),
-         czID = str_replace_all(czID, pattern = "CD", replacement = "-")) 
-
-uzmTrackInfo <- bind_rows(uzmTrackInfo_std, uzmTrackInfo_nonStd)
-
-rm(uzmTrackInfo_std, uzmTrackInfo_nonStd)
+# uzmTrackInfo_std <- 
+#   filter(uzmTrackInfo, str_detect(czID, "^\\d+(-\\d+)?$"))
+# 
+# uzmTrackInfo_nonStd <- 
+#   filter(uzmTrackInfo, !str_detect(czID, "^\\d+(-\\d+)?$")) %>% 
+#   mutate(czID = str_replace_all(czID, pattern = " ", replacement = ""),
+#          czID = str_replace_all(czID, pattern = "CD", replacement = "-")) 
+# 
+# uzmTrackInfo <- bind_rows(uzmTrackInfo_std, uzmTrackInfo_nonStd)
+# 
+# rm(uzmTrackInfo_std, uzmTrackInfo_nonStd)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Albumnaam verfraaien
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
   mutate(albumnaam = str_replace_all(albumnaam, pattern = "_", replacement = " "))
-
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
-# Knip het schijfnummer uit de albumnaam. 
-# 
-# Voorbeeld: v1 <- getDiskNr_in_albumNaam(c("CD-1", "Beethoven", "cd2", "Fantasy [Disc 3]"))
-#            v1 : "1" NA  "2" "3"
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
-getDiskNr_in_albumNaam <- function(albumnaam){
-  result <- sub("^.*(cd[- ]?(\\d+)|dis[ck] ?(\\d+)).*$", "\\2\\3", albumnaam, perl=TRUE, ignore.case=TRUE)
-  ifelse(result == albumnaam, NA, result)
-}
 
 uzmTrackInfo %<>% 
   mutate(diskNr_in_albumnaam = getDiskNr_in_albumNaam(albumnaam))
