@@ -5,26 +5,25 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Packages
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-library(readr)
-library(stringr)
-library(dplyr)
-library(tidyr)
-library(magrittr)
+# library(readr)
+# library(stringr)
+# library(dplyr)
+# library(tidyr)
+# library(magrittr)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Filter is een overloaded function; neem standaard die uit dplyr.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-filter <- dplyr::filter
+# filter <- dplyr::filter
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Lees werk-info, geïmporteerd uit DB-klassiek 
+# Lees composities, geïmporteerd uit DB-klassiek 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 filemakerTrackInfo <-
-  read_delim(
-    "F:/documenten/cz_docs/Salsa/Nipper/export_filemaker_20180523.tab",
-    "\t",
-    escape_double = FALSE,
-    trim_ws = TRUE
+  read_delim(config$import_filemaker,
+             "\t",
+             escape_double = FALSE,
+             trim_ws = TRUE
   ) %>% 
   filter(!is.na(`cz-catalogusnummer`) 
          & !is.na(tracknummers) 
