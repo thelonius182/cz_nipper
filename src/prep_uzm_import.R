@@ -38,8 +38,8 @@ uzmTrackInfo %<>%
 # Harmoniseer catalogusnummer en schijfnummer in de naam vd uitzendmac-directory
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
-  mutate(catdskNr = harmoniseer_catdskNr(dir_splits2)) %>% 
-  separate(catdskNr, c("catNr", "diskNr_dir"), sep = "¶") %>% 
+  mutate(catDskNr_dir = harmoniseer_catDskNr_dir(dir_splits2)) %>% 
+  separate(catDskNr_dir, c("catNr", "diskNr_dir"), sep = "¶") %>% 
   select(-dir_splits2)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -53,8 +53,11 @@ uzmTrackInfo %<>%
 # Behoud alleen die track-info's waarbij dat lukt.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
-  mutate(disk_track_combi = sub("^(\\d{1,3}(-\\d{1,3})?).*$", "\\1", track, perl=TRUE)) %>% 
-  filter(disk_track_combi != track)
+  mutate(track_splits1 = sub("^(\\d{1,3}(-\\d{1,3})?).*$", "\\1", track, perl=TRUE)) %>% 
+  filter(track_splits1 != track) %>% 
+  mutate(catDskNr_track = harmoniseer_catDskNr_track(track_splits1)) %>% 
+  separate(catDskNr_dir, c("diskNr_track", "trackNr"), sep = "-") %>% 
+  select(-dir_splits1)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Albumnaam verfraaien
