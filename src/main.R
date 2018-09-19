@@ -7,5 +7,4 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 filter <- dplyr::filter # don't use stats::filter unless so qualified
 config <- read_yaml("config.yaml")
-source(config$toolbox)
-  
+source(config$toolbox, encoding = "UTF-8")

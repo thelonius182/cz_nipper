@@ -38,8 +38,8 @@ uzmTrackInfo %<>%
 # Harmoniseer catalogusnummer en schijfnummer in de naam vd uitzendmac-directory
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
-  mutate(catdsk = harm_catdsk(dir_splits2)) %>% 
-  separate(catdsk, c("catNr", "diskNr_dir"), sep = "#") %>% 
+  mutate(catdskNr = harmoniseer_catdskNr(dir_splits2)) %>% 
+  separate(catdskNr, c("catNr", "diskNr_dir"), sep = "¶") %>% 
   select(-dir_splits2)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
