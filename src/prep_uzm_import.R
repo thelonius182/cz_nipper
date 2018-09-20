@@ -60,7 +60,23 @@ uzmTrackInfo %<>%
   select(-track_splits1)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Albumnaam verfraaien
+# Schijfnummer kiezen uit de 3 alternatieven, locatie vd track samenstellen, albumnaam opschonen
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
-  mutate(album = str_replace_all(album, pattern = "_", replacement = " "))
+  mutate(catNr = as.integer(catNr), trackNr = as.integer(trackNr),
+         diskNr = case_when(diskNr_dir   != "0" ~ as.integer(diskNr_dir),
+                            diskNr_album != "0" ~ as.integer(diskNr_album),
+                            diskNr_track != "0" ~ as.integer(diskNr_track),
+                            TRUE ~  as.integer("1")
+         ),
+         uzm_locatie = paste0(dir, "/", track),
+         album = str_replace_all(album, pattern = "_", replacement = " ")
+  ) 
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Alleen de relevante variabelen overhouden + sorteren + ontdubbelen
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+uzmTrackInfo %<>%
+  select(catNr, diskNr, trackNr, album, lengte, uzm_locatie) %>%
+  arrange(catNr, diskNr, trackNr) %>%
+  distinct(catNr, diskNr, trackNr, lengte, .keep_all = TRUE)

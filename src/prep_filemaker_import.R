@@ -3,24 +3,10 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Packages
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# library(readr)
-# library(stringr)
-# library(dplyr)
-# library(tidyr)
-# library(magrittr)
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Filter is een overloaded function; neem standaard die uit dplyr.
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# filter <- dplyr::filter
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Lees composities, geïmporteerd uit DB-klassiek 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 filemakerTrackInfo <-
-  read_delim(config$import_filemaker,
+  read_delim("resources/export_filemaker_20180523.tab",
              "\t",
              escape_double = FALSE,
              trim_ws = TRUE
@@ -52,4 +38,12 @@ filemakerTrackInfo <-
       tracks
   )
 
+filemakerTrackInfo_czid_type <- filemakerTrackInfo %>% 
+  mutate(czid2 = str_replace_all(czid, pattern = "\\d", replacement = "0"),
+         czid2 = str_replace_all(czid2, pattern = "\\.$",  replacement = ""),
+         czid2 = str_replace_all(czid2, pattern = " ", replacement = ""),
+         czid2 = str_replace_all(czid2, pattern = "[.,/:;]",  replacement = "-")) %>% 
+  group_by(czid2)
+  
 
+str(filemakerTrackInfo_czid_type)
