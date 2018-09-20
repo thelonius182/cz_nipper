@@ -55,12 +55,12 @@ uzmTrackInfo %<>%
 uzmTrackInfo %<>% 
   mutate(track_splits1 = sub("^(\\d{1,3}(-\\d{1,3})?).*$", "\\1", track, perl=TRUE)) %>% 
   filter(track_splits1 != track) %>% 
-  mutate(catDskNr_track = harmoniseer_catDskNr_track(track_splits1)) %>% 
-  separate(catDskNr_dir, c("diskNr_track", "trackNr"), sep = "-") %>% 
-  select(-dir_splits1)
+  mutate(dskTrkNr = harmoniseer_dskTrkNr(track_splits1)) %>% 
+  separate(dskTrkNr, c("diskNr_track", "trackNr"), sep = "-") %>% 
+  select(-track_splits1)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Albumnaam verfraaien
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 uzmTrackInfo %<>% 
-  mutate(albumnaam = str_replace_all(albumnaam, pattern = "_", replacement = " "))
+  mutate(album = str_replace_all(album, pattern = "_", replacement = " "))
