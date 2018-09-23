@@ -65,7 +65,7 @@ filemakerTrackInfo %<>%
   filter(czid2 %in% count_czid_type$czid2[1:3] | str_detect(tracks, pattern = ":"))
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Schijfnummers uitknippen ----
+# Catalogus/Disk/Track uitknippen ----
 # czID splitsen in catNr en diskNr
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 filemakerTrackInfo %<>% 
@@ -79,3 +79,30 @@ filemakerTrackInfo %<>%
   mutate(tracks_splits1 = harmoniseer_catTrcks_in_FM_tracks(tracks)) %>% 
   separate(tracks_splits1, c("diskNr_tracks", "trackBeg", "trackEnd"), sep = "¶")
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Uiteindelijke Cat/Dsk/Trk-nr's bepalen + ontdubbelen; skip alles met onconverteerbaar tracknr, zoals
+# "4 CD's", "1:01-39;2:01-25;3:01-26", etc.
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+filemakerTrackInfo %<>% 
+  mutate(catNr = as.integer(catNr),
+         diskNr_czid = as.integer(diskNr_czid),
+         diskNr_tracks = as.integer(diskNr_tracks),
+         diskNr = case_when(diskNr_tracks > 0 ~ diskNr_tracks,
+                            diskNr_czid > 0 ~ diskNr_czid,
+                            TRUE ~ as.integer("1")
+         ),
+         trackBeg = as.integer(trackBeg),
+         trackEnd = as.integer(trackEnd)
+  ) %>% 
+  filter(!is.na(trackBeg) & catNr > 0) %>% 
+  select(catNr, diskNr, trackBeg, trackEnd, componist, titel, 
+         bezetting, uitvoerenden, label, labelcode) %>% 
+  arrange(catNr, diskNr, trackBeg) %>% 
+  distinct(catNr, diskNr, trackBeg, .keep_all = TRUE)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# OpnameNr uitdelen
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+filemakerTrackInfo %<>% 
+  mutate(opnameNr = 1:nrow(filemakerTrackInfo))
+  

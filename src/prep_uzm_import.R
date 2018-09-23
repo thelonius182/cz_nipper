@@ -79,4 +79,4 @@ uzmTrackInfo %<>%
 uzmTrackInfo %<>%
   select(catNr, diskNr, trackNr, album, lengte, uzm_locatie) %>%
   arrange(catNr, diskNr, trackNr) %>%
-  distinct(catNr, diskNr, trackNr, lengte, .keep_all = TRUE)
+  distinct(catNr, diskNr, trackNr, .keep_all = TRUE)
