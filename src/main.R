@@ -1,87 +1,96 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# cz_nipper MAIN ----
+# =                                                M A I N
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Init ----
+# Init
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-filter <-
-  dplyr::filter # don't use stats::filter unless so qualified
-
 config <- read_yaml("config.yaml")
 
 source(config$toolbox, encoding = "UTF-8")
-source("src/prep_uzm_import.R", encoding = "UTF-8")
-source("src/prep_filemaker_import.R", encoding = "UTF-8")
+
+filter <-
+  dplyr::filter # don't use stats::filter unless so qualified
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Filemaker en audiofiles koppelen
+# Er valt alleen iets te preppen als er een nieuwe import van uitzendmac of filemaker is
+# <TODO>analyseer de file-properties om dit vast te stellen</TODO>
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-uzm_fm_vuil <-
-  left_join(uzmTrackInfo,
-            filemakerTrackInfo,
-            by = c("catNr",
-                   "diskNr",
-                   "trackNr" = "trackBeg"))
+if (config$uitzendmac_gewijzigd | config$filemaker_gewijzigd) {
+  source("src/prep_all.R", encoding = "UTF-8")
+}
 
-uzm_fm_bruikbaar <- uzm_fm_vuil %>%
-  filter(trackNr == 1 & !is.na(trackEnd)) %>%
-  distinct(catNr, diskNr) %>%
-  mutate(heeftMetadata = TRUE)
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Lees gematchte Componisten op GD ----
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+library(googlesheets)
+nip_componisten_GD_reg <- gs_title("Nipper Componisten") 
 
-uzm_fm_schoon <-
-  left_join(uzm_fm_vuil, uzm_fm_bruikbaar, by = c("catNr", "diskNr")) %>%
-  filter(heeftMetadata) %>%
+gd_componisten <- nip_componisten_GD_reg %>% 
+  gs_read(ws = "componisten")
+
+gd_componisten_db <- nip_componisten_GD_reg %>% 
+  gs_read(ws = "db_componisten") %>% 
+  select(-starts_with("X"), -starts_with("peil"), -starts_with("land"), -delta) %>% 
+  filter(!is.na(id))
+
+ref_componisten <- left_join(gd_componisten, gd_componisten_db, by = "componist_key")
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Voeg componist-data toe aan track-info ----
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "componist_FM")) %>% 
   select(
     opnameNr,
     catNr,
     diskNr,
-    trackBeg = trackNr,
-    trackEnd,
-    componist,
+    trackNr,
+    tijdvak,
+    nationaliteit,
+    componist_key,
+    componist_lbl,
     titel,
-    lengte,
-    album,
     bezetting,
     uitvoerenden,
-    uzm_locatie,
+    lengte,
+    album,
     label,
-    labelcode
-  )
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# OpnameNr's completeren & kolommen vervangen/hernoemen
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-num_sav <- NULL
-i1 <- 0
-onr_compl <- NULL
-
-for (num in uzm_fm_schoon$opnameNr) {
-  i1 <- i1 + 1
-  
-  if (!is.na(num)) {
-    num_sav <- num
-  }
-  
-  onr_compl[i1] <- num_sav
-}
-
-uzm_fm_schoon %<>% select(-opnameNr, -trackEnd)
-
-uzm_fm_schoon <- bind_cols(as.data.frame(onr_compl), uzm_fm_schoon)
-
-uzm_fm_schoon %<>% rename(opnameNr = onr_compl, trackNr = trackBeg)
-
-rm(uzm_fm_bruikbaar, uzm_fm_vuil, count_czid_type)
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Opnamelengtes berekenen
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-opnamelengte <- uzm_fm_schoon %>% 
+    labelcode,
+    van,
+    tot,
+    uzm_locatie,
+    -id,
+    - componist
+  ) %>% 
+  arrange(
+    opnameNr,
+    catNr,
+    diskNr,
+    trackNr
+  ) %>% 
+  mutate(trackNr = factor(trackNr, levels = unique(trackNr))) %>% 
   group_by(opnameNr) %>% 
-  summarise(tot_lengte = sum(lengte))
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Opnamelengtes berekenen
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  mutate(opnameVlgNr = dense_rank(trackNr)) %>% 
+  select(
+    opnameNr,
+    opnameVlgNr,
+    catNr,
+    diskNr,
+    trackNr,
+    tijdvak,
+    nationaliteit,
+    componist_key,
+    componist_lbl,
+    titel,
+    bezetting,
+    uitvoerenden,
+    lengte,
+    album,
+    label,
+    labelcode,
+    van,
+    tot,
+    uzm_locatie
+  )
+    
 
