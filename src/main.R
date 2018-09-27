@@ -70,13 +70,12 @@ nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "compon
   ) %>% 
   mutate(trackNr = factor(trackNr, levels = unique(trackNr))) %>% 
   group_by(opnameNr) %>% 
-  mutate(opnameVlgNr = dense_rank(trackNr)) %>% 
+  mutate(opnameVlgNr = dense_rank(trackNr)) 
+
+nipper_werk_links <- nipper %>% 
   select(
     opnameNr,
     opnameVlgNr,
-    catNr,
-    diskNr,
-    trackNr,
     tijdvak,
     nationaliteit,
     componist_key,
@@ -84,13 +83,61 @@ nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "compon
     titel,
     bezetting,
     uitvoerenden,
-    lengte,
-    album,
-    label,
-    labelcode,
-    van,
-    tot,
+    album
+  ) %>% 
+  filter(opnameVlgNr == 1) %>% 
+  select(-opnameVlgNr)
+
+nipper_werk <- left_join(nipper_werk_links, opnamelengte, by = "opnameNr") %>% 
+  select(
+    opnameNr,
+    tot_lengte_in_seconden,
+    tijdvak,
+    nationaliteit,
+    componist_key,
+    componist_lbl,
+    titel,
+    bezetting,
+    uitvoerenden,
+    album
+  ) %>% 
+  mutate(lengte = as.character(hms::as.hms(round(tot_lengte_in_seconden, digits = 0)))) %>% 
+  select(-tot_lengte_in_seconden)
+
+nipper_track <- nipper %>% 
+  select(
+    opnameNr,
+    opnameVlgNr,
     uzm_locatie
   )
-    
 
+nipper_todo <- nipper_werk %>% filter(tijdvak == "?") %>% 
+  group_by(componist_key) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n))
+
+nipper_werk %<>% 
+  filter(tijdvak != "?") %>% 
+  select(tijdvak,
+         componist_lbl,
+         nationaliteit,
+         titel,
+         lengte,
+         bezetting,
+         uitvoerenden,
+         album,
+         opnameNr
+  ) %>% 
+  mutate(tijdvak = factor(tijdvak, levels = c("Middeleeuwen",
+                                              "Renaissance",
+                                              "Barok",
+                                              "Klassiek",
+                                              "Romantiek",
+                                              "Modern")
+                          )
+  ) %>% 
+  arrange(tijdvak,
+          componist_lbl,
+          titel,
+          lengte
+  ) 
