@@ -3,17 +3,15 @@
 # Resultaat: 2 tibbles - uzm_fm_schoon en opnamelengte
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
-print("prepping")
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Hier aangekomen zijn er blijkbaar wel nieuwe imports; zet die klaar
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-source("src/prep_uzm_import.R", encoding = "UTF-8")
-source("src/prep_filemaker_import.R", encoding = "UTF-8")
+# source("src/prep_uzm_import.R", encoding = "UTF-8")
+# source("src/prep_filemaker_import.R", encoding = "UTF-8")
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Filemaker en audiofiles koppelen
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+uzmTrackInfo <- readRDS("resources/uzmTrackIndo.rds")
+filemakerTrackInfo <- readRDS("resources/filemakerTrackInfo.rds")
+
 uzm_fm_vuil <-
   left_join(uzmTrackInfo,
             filemakerTrackInfo,
@@ -69,7 +67,7 @@ uzm_fm_schoon <- bind_cols(as.data.frame(tmp_opnameNr), uzm_fm_schoon)
 
 uzm_fm_schoon %<>% rename(opnameNr = tmp_opnameNr, trackNr = trackBeg)
 
-rm(uzm_fm_bruikbaar, uzm_fm_vuil, count_czid_type)
+rm(uzm_fm_bruikbaar, uzm_fm_vuil, count_czid_type, tmp_opnameNr, i1, opnNr, opnNr_sav)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Opnamelengtes berekenen

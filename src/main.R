@@ -17,8 +17,11 @@ filter <-
 # <TODO>analyseer de file-properties om dit vast te stellen</TODO>
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if (config$uitzendmac_gewijzigd | config$filemaker_gewijzigd) {
-  source("src/prep_all.R", encoding = "UTF-8")
+  source("src/prep_uzm_import.R", encoding = "UTF-8")
+  source("src/prep_filemaker_import.R", encoding = "UTF-8")
 }
+
+source("src/prep_all.R", encoding = "UTF-8")
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Lees gematchte Componisten op GD ----
@@ -35,6 +38,7 @@ gd_componisten_db <- nip_componisten_GD_reg %>%
   filter(!is.na(id))
 
 ref_componisten <- left_join(gd_componisten, gd_componisten_db, by = "componist_key")
+rm(gd_componisten, gd_componisten_db, nip_componisten_GD_reg)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Voeg componist-data toe aan track-info ----
@@ -72,6 +76,8 @@ nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "compon
   group_by(opnameNr) %>% 
   mutate(opnameVlgNr = dense_rank(trackNr)) 
 
+rm(ref_componisten)
+
 nipper_werk_links <- nipper %>% 
   select(
     opnameNr,
@@ -103,6 +109,8 @@ nipper_werk <- left_join(nipper_werk_links, opnamelengte, by = "opnameNr") %>%
   ) %>% 
   mutate(lengte = as.character(hms::as.hms(round(tot_lengte_in_seconden, digits = 0)))) %>% 
   select(-tot_lengte_in_seconden)
+
+rm(nipper_werk_links)
 
 nipper_track <- nipper %>% 
   select(
@@ -141,3 +149,7 @@ nipper_werk %<>%
           titel,
           lengte
   ) 
+
+rm(filemakerTrackInfo, uzmTrackInfo, uzm_fm_schoon)
+
+write_delim(nipper_werk, "f:/documenten/ws_rstudio/cz_nipper/resources/nipper_werk.tab", delim = "\U0009")

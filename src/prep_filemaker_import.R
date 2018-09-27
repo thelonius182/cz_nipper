@@ -106,3 +106,7 @@ filemakerTrackInfo %<>%
 filemakerTrackInfo %<>% 
   mutate(opnameNr = 1:nrow(filemakerTrackInfo))
   
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Bewaar in rds-indeling
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+saveRDS(object = filemakerTrackInfo, file = "resources/filemakerTrackInfo.rds")

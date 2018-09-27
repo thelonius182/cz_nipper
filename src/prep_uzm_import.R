@@ -80,3 +80,8 @@ uzmTrackInfo %<>%
   select(catNr, diskNr, trackNr, album, lengte, uzm_locatie) %>%
   arrange(catNr, diskNr, trackNr) %>%
   distinct(catNr, diskNr, trackNr, .keep_all = TRUE)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Bewaar in rds-indeling
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+saveRDS(object = uzmTrackInfo, file = "resources/uzmTrackIndo.rds")
