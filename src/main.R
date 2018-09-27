@@ -152,4 +152,4 @@ nipper_werk %<>%
 
 rm(filemakerTrackInfo, uzmTrackInfo, uzm_fm_schoon)
 
-write_delim(nipper_werk, "f:/documenten/ws_rstudio/cz_nipper/resources/nipper_werk.tab", delim = "\U0009")
+write_delim(nipper_werk, config$nipper_werk, delim = "\U0009")
