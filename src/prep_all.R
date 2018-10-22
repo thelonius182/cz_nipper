@@ -9,7 +9,7 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Filemaker en audiofiles koppelen
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-uzmTrackInfo <- readRDS("resources/uzmTrackIndo.rds")
+uzmTrackInfo <- readRDS("resources/uzmTrackInfo.rds")
 filemakerTrackInfo <- readRDS("resources/filemakerTrackInfo.rds")
 
 uzm_fm_vuil <-
@@ -49,7 +49,7 @@ uzm_fm_schoon <-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 opnNr_sav <- NULL
 i1 <- 0
-tmp_opnameNr <- NULL # want er zit al een opnameNr in uzm_fm_schoon
+tmp_opnameNr <- NULL # "tmp_", want er zit al een opnameNr in uzm_fm_schoon
 
 for (opnNr in uzm_fm_schoon$opnameNr) {
   i1 <- i1 + 1
@@ -67,7 +67,7 @@ uzm_fm_schoon <- bind_cols(as.data.frame(tmp_opnameNr), uzm_fm_schoon)
 
 uzm_fm_schoon %<>% rename(opnameNr = tmp_opnameNr, trackNr = trackBeg)
 
-rm(uzm_fm_bruikbaar, uzm_fm_vuil, count_czid_type, tmp_opnameNr, i1, opnNr, opnNr_sav)
+rm(uzm_fm_bruikbaar, uzm_fm_vuil, tmp_opnameNr, i1, opnNr, opnNr_sav)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Opnamelengtes berekenen

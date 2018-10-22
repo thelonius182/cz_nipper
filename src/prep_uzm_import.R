@@ -78,10 +78,15 @@ uzmTrackInfo %<>%
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 uzmTrackInfo %<>%
   select(catNr, diskNr, trackNr, album, lengte, uzm_locatie) %>%
+  # parent folder vd audio verwijderen zodat audio ook op andere servers kan staan
   arrange(catNr, diskNr, trackNr) %>%
   distinct(catNr, diskNr, trackNr, .keep_all = TRUE)
+
+uzmTrackInfo$uzm_locatie = str_replace(uzmTrackInfo$uzm_locatie, 
+                                       pattern = "/Volumes/cz archief 01/", 
+                                       replacement = "")
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Bewaar in rds-indeling
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-saveRDS(object = uzmTrackInfo, file = "resources/uzmTrackIndo.rds")
+saveRDS(object = uzmTrackInfo, file = "resources/uzmTrackInfo.rds")

@@ -78,6 +78,8 @@ nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "compon
 
 rm(ref_componisten)
 
+saveRDS(object = nipper, file = "resources/nipper.rds")
+
 nipper_werk_links <- nipper %>% 
   select(
     opnameNr,
@@ -112,12 +114,14 @@ nipper_werk <- left_join(nipper_werk_links, opnamelengte, by = "opnameNr") %>%
 
 rm(nipper_werk_links)
 
-nipper_track <- nipper %>% 
+nipper_tracks <- nipper %>% 
   select(
     opnameNr,
     opnameVlgNr,
     uzm_locatie
   )
+
+saveRDS(object = nipper_tracks, file = "resources/nipper_tracks.rds")
 
 nipper_todo <- nipper_werk %>% filter(tijdvak == "?") %>% 
   group_by(componist_key) %>% 

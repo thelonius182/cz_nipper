@@ -1,0 +1,293 @@
+INFO [2018-10-15 00:52:17] [INFO] bad.function message: Hello world!
+
+Compact call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 tryCatchLog_demo.R#49: tryCatchLog({
+  3 tryCatchLog_demo.R#50: bad.function(a.negative.number)
+  4 tryCatchLog_demo.R#44: message(simpleMessage(paste("bad.function message:", hello)))
+
+Full call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 source(available, echo = echo, max.deparse.length = Inf, keep.source = TRUE, encoding = encoding)
+  3 withVisible(eval(ei, envir))
+  4 eval(ei, envir)
+  5 eval(ei, envir)
+  6 tryCatchLog_demo.R#49: tryCatchLog({
+        bad.function(a.negative.number)
+        bad.function(a.string)
+    }, error = function(e) {
+        print("Error handling starts now...")
+    }, finally = {
+        print("Finally...")
+    })
+  7 tryCatch(withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler), ..., finally = finally)
+  8 tryCatchList(expr, classes, parentenv, handlers)
+  9 tryCatchOne(expr, names, parentenv, handlers[[1]])
+  10 doTryCatch(return(expr), name, parentenv, handler)
+  11 withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler)
+  12 tryCatchLog_demo.R#50: bad.function(a.negative.number)
+  13 tryCatchLog_demo.R#44: message(simpleMessage(paste("bad.function message:", hello)))
+  14 withRestarts({
+        signalCondition(cond)
+        defaultHandler(cond)
+    }, muffleMessage = function() NULL)
+  15 withOneRestart(expr, restarts[[1]])
+  16 doWithOneRestart(return(expr), restart)
+  17 signalCondition(cond)
+
+
+WARN [2018-10-15 00:52:17] [WARN] NaNs produced
+
+Compact call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 tryCatchLog_demo.R#49: tryCatchLog({
+  3 tryCatchLog_demo.R#50: bad.function(a.negative.number)
+  4 tryCatchLog_demo.R#45: .signalSimpleWarning("NaNs produced", quote(log(value)))
+
+Full call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 source(available, echo = echo, max.deparse.length = Inf, keep.source = TRUE, encoding = encoding)
+  3 withVisible(eval(ei, envir))
+  4 eval(ei, envir)
+  5 eval(ei, envir)
+  6 tryCatchLog_demo.R#49: tryCatchLog({
+        bad.function(a.negative.number)
+        bad.function(a.string)
+    }, error = function(e) {
+        print("Error handling starts now...")
+    }, finally = {
+        print("Finally...")
+    })
+  7 tryCatch(withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler), ..., finally = finally)
+  8 tryCatchList(expr, classes, parentenv, handlers)
+  9 tryCatchOne(expr, names, parentenv, handlers[[1]])
+  10 doTryCatch(return(expr), name, parentenv, handler)
+  11 withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler)
+  12 tryCatchLog_demo.R#50: bad.function(a.negative.number)
+  13 tryCatchLog_demo.R#45: .signalSimpleWarning("NaNs produced", quote(log(value)))
+  14 withRestarts({
+        .Internal(.signalCondition(simpleWarning(msg, call), msg, call))
+        .Internal(.dfltWarn(msg, call))
+    }, muffleWarning = function() NULL)
+  15 withOneRestart(expr, restarts[[1]])
+  16 doWithOneRestart(return(expr), restart)
+
+
+INFO [2018-10-15 00:52:17] [INFO] bad.function message: Hello world!
+
+Compact call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 tryCatchLog_demo.R#49: tryCatchLog({
+  3 tryCatchLog_demo.R#51: bad.function(a.string)
+  4 tryCatchLog_demo.R#44: message(simpleMessage(paste("bad.function message:", hello)))
+
+Full call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 source(available, echo = echo, max.deparse.length = Inf, keep.source = TRUE, encoding = encoding)
+  3 withVisible(eval(ei, envir))
+  4 eval(ei, envir)
+  5 eval(ei, envir)
+  6 tryCatchLog_demo.R#49: tryCatchLog({
+        bad.function(a.negative.number)
+        bad.function(a.string)
+    }, error = function(e) {
+        print("Error handling starts now...")
+    }, finally = {
+        print("Finally...")
+    })
+  7 tryCatch(withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler), ..., finally = finally)
+  8 tryCatchList(expr, classes, parentenv, handlers)
+  9 tryCatchOne(expr, names, parentenv, handlers[[1]])
+  10 doTryCatch(return(expr), name, parentenv, handler)
+  11 withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler)
+  12 tryCatchLog_demo.R#51: bad.function(a.string)
+  13 tryCatchLog_demo.R#44: message(simpleMessage(paste("bad.function message:", hello)))
+  14 withRestarts({
+        signalCondition(cond)
+        defaultHandler(cond)
+    }, muffleMessage = function() NULL)
+  15 withOneRestart(expr, restarts[[1]])
+  16 doWithOneRestart(return(expr), restart)
+  17 signalCondition(cond)
+
+
+ERROR [2018-10-15 00:52:17] [ERROR] non-numeric argument to mathematical function
+
+Compact call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 tryCatchLog_demo.R#49: tryCatchLog({
+  3 tryCatchLog_demo.R#51: bad.function(a.string)
+  4 tryCatchLog_demo.R#45: .handleSimpleError(function (c) 
+
+Full call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 source(available, echo = echo, max.deparse.length = Inf, keep.source = TRUE, encoding = encoding)
+  3 withVisible(eval(ei, envir))
+  4 eval(ei, envir)
+  5 eval(ei, envir)
+  6 tryCatchLog_demo.R#49: tryCatchLog({
+        bad.function(a.negative.number)
+        bad.function(a.string)
+    }, error = function(e) {
+        print("Error handling starts now...")
+    }, finally = {
+        print("Finally...")
+    })
+  7 tryCatch(withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler), ..., finally = finally)
+  8 tryCatchList(expr, classes, parentenv, handlers)
+  9 tryCatchOne(expr, names, parentenv, handlers[[1]])
+  10 doTryCatch(return(expr), name, parentenv, handler)
+  11 withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler)
+  12 tryCatchLog_demo.R#51: bad.function(a.string)
+  13 tryCatchLog_demo.R#45: .handleSimpleError(function (c) 
+    {
+        call.stack <- sys.calls()
+        log.message <- c$message
+        timestamp <- Sys.time()
+        dump.file.name <- ""
+        severity <- if (inherits(c, "error")) 
+            "ERROR"
+        else if (inherits(c, "warning")) 
+            "WARN"
+        else if (inherits(c, "message")) 
+            "INFO"
+        else stop(sprintf("Unsupported condition class %s!", class(c)))
+        if (write.error.dump.file == TRUE & severity == "ERROR") {
+            dump.file.name <- format(timestamp, format = "dump_%Y%m%d_%H%M%S.rda")
+            utils::dump.frames()
+            save.image(file = dump.file.name)
+        }
+        log.entry <- build.log.entry(timestamp, severity, log.message, call.stack, dump.file.name, omit.call.stack.items = 1)
+        if (!is.duplicated.log.entry(log.entry)) {
+            log.msg <- build.log.output(log.entry)
+            switch(severity, ERROR = flog.error(log.msg), WARN = flog.warn(log.msg), INFO = flog.info(log.msg))
+            append.to.last.tryCatchLog.result(log.entry)
+        }
+        if (silent.warnings & severity == "WARN") {
+            invokeRestart("muffleWarning")
+        }
+        else {
+        }
+        if (silent.messages & severity == "INFO") {
+            invokeRestart("muffleMessage")
+        }
+        else {
+        }
+    }, "non-numeric argument to mathematical function", quote(log(value)))
+
+
+ERROR [2018-10-15 00:52:17] [ERROR] non-numeric argument to mathematical function
+
+Compact call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 tryCatchLog_demo.R#74: tryLog(log("not a number!"))
+
+Full call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 source(available, echo = echo, max.deparse.length = Inf, keep.source = TRUE, encoding = encoding)
+  3 withVisible(eval(ei, envir))
+  4 eval(ei, envir)
+  5 eval(ei, envir)
+  6 tryCatchLog_demo.R#74: tryLog(log("not a number!"))
+  7 tryCatchLog(expr = expr, write.error.dump.file = write.error.dump.file, error = function(e) {
+        msg <- conditionMessage(e)
+        invisible(structure(msg, class = "try-error", condition = e))
+    }, silent.warnings = silent.warnings, silent.messages = silent.messages)
+  8 tryCatch(withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler), ..., finally = finally)
+  9 tryCatchList(expr, classes, parentenv, handlers)
+  10 tryCatchOne(expr, names, parentenv, handlers[[1]])
+  11 doTryCatch(return(expr), name, parentenv, handler)
+  12 withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler)
+  13 .handleSimpleError(function (c) 
+    {
+        call.stack <- sys.calls()
+        log.message <- c$message
+        timestamp <- Sys.time()
+        dump.file.name <- ""
+        severity <- if (inherits(c, "error")) 
+            "ERROR"
+        else if (inherits(c, "warning")) 
+            "WARN"
+        else if (inherits(c, "message")) 
+            "INFO"
+        else stop(sprintf("Unsupported condition class %s!", class(c)))
+        if (write.error.dump.file == TRUE & severity == "ERROR") {
+            dump.file.name <- format(timestamp, format = "dump_%Y%m%d_%H%M%S.rda")
+            utils::dump.frames()
+            save.image(file = dump.file.name)
+        }
+        log.entry <- build.log.entry(timestamp, severity, log.message, call.stack, dump.file.name, omit.call.stack.items = 1)
+        if (!is.duplicated.log.entry(log.entry)) {
+            log.msg <- build.log.output(log.entry)
+            switch(severity, ERROR = flog.error(log.msg), WARN = flog.warn(log.msg), INFO = flog.info(log.msg))
+            append.to.last.tryCatchLog.result(log.entry)
+        }
+        if (silent.warnings & severity == "WARN") {
+            invokeRestart("muffleWarning")
+        }
+        else {
+        }
+        if (silent.messages & severity == "INFO") {
+            invokeRestart("muffleMessage")
+        }
+        else {
+        }
+    }, "non-numeric argument to mathematical function", quote(log("not a number!")))
+
+
+ERROR [2018-10-15 00:52:18] [ERROR] non-numeric argument to mathematical function
+
+Compact call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 tryCatchLog_demo.R#79: tryCatchLog(log("not a number!"), error = function(e) {
+
+Full call stack:
+  1 demo(package = "tryCatchLog", topic = "tryCatchLog_demo")
+  2 source(available, echo = echo, max.deparse.length = Inf, keep.source = TRUE, encoding = encoding)
+  3 withVisible(eval(ei, envir))
+  4 eval(ei, envir)
+  5 eval(ei, envir)
+  6 tryCatchLog_demo.R#79: tryCatchLog(log("not a number!"), error = function(e) {
+    })
+  7 tryCatch(withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler), ..., finally = finally)
+  8 tryCatchList(expr, classes, parentenv, handlers)
+  9 tryCatchOne(expr, names, parentenv, handlers[[1]])
+  10 doTryCatch(return(expr), name, parentenv, handler)
+  11 withCallingHandlers(expr, error = cond.handler, warning = cond.handler, message = cond.handler)
+  12 .handleSimpleError(function (c) 
+    {
+        call.stack <- sys.calls()
+        log.message <- c$message
+        timestamp <- Sys.time()
+        dump.file.name <- ""
+        severity <- if (inherits(c, "error")) 
+            "ERROR"
+        else if (inherits(c, "warning")) 
+            "WARN"
+        else if (inherits(c, "message")) 
+            "INFO"
+        else stop(sprintf("Unsupported condition class %s!", class(c)))
+        if (write.error.dump.file == TRUE & severity == "ERROR") {
+            dump.file.name <- format(timestamp, format = "dump_%Y%m%d_%H%M%S.rda")
+            utils::dump.frames()
+            save.image(file = dump.file.name)
+        }
+        log.entry <- build.log.entry(timestamp, severity, log.message, call.stack, dump.file.name, omit.call.stack.items = 1)
+        if (!is.duplicated.log.entry(log.entry)) {
+            log.msg <- build.log.output(log.entry)
+            switch(severity, ERROR = flog.error(log.msg), WARN = flog.warn(log.msg), INFO = flog.info(log.msg))
+            append.to.last.tryCatchLog.result(log.entry)
+        }
+        if (silent.warnings & severity == "WARN") {
+            invokeRestart("muffleWarning")
+        }
+        else {
+        }
+        if (silent.messages & severity == "INFO") {
+            invokeRestart("muffleMessage")
+        }
+        else {
+        }
+    }, "non-numeric argument to mathematical function", quote(log("not a number!")))
+
+
