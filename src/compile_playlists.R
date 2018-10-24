@@ -66,7 +66,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     filter(!is.na(vt_blok)) %>% 
     # splits de voice-tracking blokken in letter en volgnummer, om bij sorteren te verhinderen 
     # dat blok A10 meteen na blok A1 komt
-    mutate(vt_blok_letter = str_sub(vt_blok, start = 1, end = 1), vt_blok_nr = str_sub(vt_blok, start = 2)) %>% 
+    mutate(vt_blok_letter = str_sub(vt_blok, start = 1, end = 1), vt_blok_nr = as.integer(str_sub(vt_blok, start = 2))) %>% 
     select(-tot_time, -op_huidige_pl, -keuze, -vt_blok) %>% 
     arrange(playlist, vt_blok_letter, vt_blok_nr)
   
@@ -140,6 +140,8 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
   programma_sleutels <- gd_nip_xpr %>% gs_read(ws = "programma_sleutels")
   
   audio_locaties <- gd_nip_xpr %>% gs_read(ws = "audio_locaties")
+
+  source("src/compile_schedulerscript.R")
   
   for (cur_pl in pl_nieuw$playlist) {
     
@@ -275,6 +277,11 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     
     write.table(x = rlprg_file, file = paste0("resources/playlists/", cur_pl, ".rlprg"), 
                 row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
+    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    # scheduler-script samenstellen
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    build_rl_script(cur_pl)
   }
 
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
