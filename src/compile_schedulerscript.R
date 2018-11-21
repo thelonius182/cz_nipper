@@ -67,14 +67,17 @@ build_rl_script <- function(playlist) {
   sch01_const_17 <- "Begin Script" %>% as_tibble
   
   # load
-  sch01_load <- paste("load", "", "", "", "", playlist, "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
+  rlprg_file <- paste0(playlist, ".rlprg")
+  sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
   # fill
-  f_limiet <- rls_fill(playlist)
-  sch01_fill <- paste("fill", "", f_limiet[1], f_limiet[2], "", 
+  # f_limiet <- rls_fill(playlist)
+  # sch01_play <- paste("fill", "", f_limiet[1], f_limiet[2], "", 
+  sch01_play <- paste("play", "", "", "", "", 
                       "itunes_pl_aanvulling_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
   script_file <- bind_rows(sch01_C0, 
+                           sch01_dag,
                            sch01_lengte,
                            sch01_dj_voorkeur, 
                            sch01_stuur_naar_dj,
@@ -94,12 +97,11 @@ build_rl_script <- function(playlist) {
                            sch01_const_16,
                            sch01_const_17,
                            sch01_load,
-                           sch01_fill
+                           sch01_play
   )
   
-  write.table(x = script_file, file = paste0("resources/schedules/", playlist, ".txt"), 
+  write.table(x = script_file, file = paste0("resources/schedules/014 - ", playlist), 
               row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
-  
 }
 
 rls_dagletters <- function(some_playlist) {

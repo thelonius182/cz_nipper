@@ -1,159 +1,299 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                                M A I N
+# Genereer RL-playlists, -schedules en de html-draaiboeken.
+# Maak de audio-folders voor de studiomontage
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Init
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+library(googlesheets)
+library(RCurl)
+
 config <- read_yaml("config.yaml")
 
 source(config$toolbox, encoding = "UTF-8")
 
-filter <-
-  dplyr::filter # don't use stats::filter unless so qualified
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Er valt alleen iets te preppen als er een nieuwe import van uitzendmac of filemaker is
-# <TODO>analyseer de file-properties om dit vast te stellen</TODO>
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if (config$uitzendmac_gewijzigd | config$filemaker_gewijzigd) {
-  source("src/prep_uzm_import.R", encoding = "UTF-8")
-  source("src/prep_filemaker_import.R", encoding = "UTF-8")
+home_prop <- function(prop) {
+  prop_name <- paste0(prop, ".", host)
+  prop <- config[[prop_name]] %>% 
+    curlEscape %>% 
+    str_replace_all(pattern = "\\%2F", replacement = "/")
 }
 
-source("src/prep_all.R", encoding = "UTF-8")
+filter <-
+  dplyr::filter # voorkom verwarring met stats::filter
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Lees gematchte Componisten op GD ----
+# Nipper Express spreadsheet op GD openen
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-library(googlesheets)
-nip_componisten_GD_reg <- gs_title("Nipper Componisten") 
+# zonodig: change to new user; er opent een browser dialogue
+# gs_auth(new_user = TRUE)
+gd_nip_xpr <- gs_title(config$nip_xpr_gd_reg)
 
-gd_componisten <- nip_componisten_GD_reg %>% 
-  gs_read(ws = "componisten")
+for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan worden
 
-gd_componisten_db <- nip_componisten_GD_reg %>% 
-  gs_read(ws = "db_componisten") %>% 
-  select(-starts_with("X"), -starts_with("peil"), -starts_with("land"), -delta) %>% 
-  filter(!is.na(id))
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Init config
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  host <- config$host
+  home_vt_audio <- home_prop("home_vt_audio")
+  home_radiologik <- home_prop("home_radiologik")
+  home_fonotheek <- home_prop("home_fonotheek")
 
-ref_componisten <- left_join(gd_componisten, gd_componisten_db, by = "componist_key")
-rm(gd_componisten, gd_componisten_db, nip_componisten_GD_reg)
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Kijk in werkblad "playlists" welke nieuwe playlists er moeten komen
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  pl_nieuw <- gd_nip_xpr %>% 
+    gs_read(ws = "playlists") %>% 
+    filter(is.na(samengesteld_op), !is.na(playlist))
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Haal de werken op 
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  pl_werken <- gd_nip_xpr %>% 
+    gs_read(ws = "nipper-select") %>% 
+    filter(playlist %in% pl_nieuw$playlist) %>% 
+    filter(!is.na(vt_blok)) %>% 
+    # splits de voice-tracking blokken in letter en volgnummer, om bij sorteren te verhinderen 
+    # dat blok A10 meteen na blok A1 komt
+    mutate(vt_blok_letter = str_sub(vt_blok, start = 1, end = 1), vt_blok_nr = as.integer(str_sub(vt_blok, start = 2))) %>% 
+    select(-tot_time, -op_huidige_pl, -keuze, -vt_blok) %>% 
+    arrange(playlist, vt_blok_letter, vt_blok_nr)
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Alleen playlists maken waar ook echt wat in staat
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  pl_nieuw %<>% filter(playlist %in% pl_werken$playlist) %>% 
+    select(playlist_id, playlist, programma, start, anchor)
+  
+  if(nrow(pl_nieuw) == 0){
+    print("Er zijn geen nieuwe playlists.")
+    break
+  }
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Alleen playlists maken als alle blokken uniek genummerd zijn
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  dubbele_blokken <- pl_werken %>% 
+    group_by(playlist, vt_blok_letter, vt_blok_nr) %>% 
+    summarise(n_dubbel = n()) %>% 
+    filter(n_dubbel > 1) %>% select(-n_dubbel)
+  
+  if(nrow(dubbele_blokken) > 0){
+    print("Sommige blokken zijn dubbel benoemd")
+    unite(data = dubbele_blokken, col = regel, sep = " ")
+    break
+  }
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Bepaal de playlist lengtes
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  pl_duur <- pl_werken %>% 
+    group_by(playlist, vt_blok_letter) %>% 
+    summarise(blokduur = sum(lengte)) %>% 
+    # blokduur omzetten in seconden: seconds(hms = 00:05:00) = 300S
+    #                                as.integer(300S) = 300
+    mutate(blokduur_sec = as.integer(seconds(blokduur))) %>% 
+    group_by(playlist) %>% 
+    summarise(blokken = n(),
+              muzieklengte = sum(blokduur_sec)) %>% 
+    # 'speling': 00:50 tune+uitzending_aan/af
+    #            00:30 minimum aanvulling, 
+    #            05:00 maximum aanvulling, 
+    #            00:40 presentatie per blok af+aan
+    mutate(speling_min = 50 +  30 + 40 * blokken, 
+           speling_max = 50 + 300 + 40 * blokken,
+           slotlengte = 60 * as.integer(str_sub(playlist, start = 15, end = 17)),
+           muziek_min = slotlengte - speling_max,
+           muziek_max = slotlengte - speling_min,
+           vulling = case_when(muzieklengte > muziek_max ~ paste0("rood (+", muzieklengte - muziek_max, "s)"),
+                               muzieklengte > muziek_min ~ "groen",
+                               TRUE                      ~ paste0("geel (-", muziek_min - muzieklengte, "s)")
+           )
+    )
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Haal de tracks op
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  nipper_tracks <- readRDS("resources/nipper_tracks.rds")
+  
+  pl_tracks <- pl_werken %>% 
+    select(playlist, vt_blok_letter, vt_blok_nr, opnameNr) %>% 
+    left_join(., nipper_tracks, by = "opnameNr") %>% 
+    mutate(uzm_locatie = curlEscape(uzm_locatie),
+           uzm_locatie = paste0(home_fonotheek, uzm_locatie),
+           uzm_locatie = str_replace_all(uzm_locatie, pattern = "\\%2F", replacement = "/"))
+           
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # RL-playlist samenstellen
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  programma_sleutels <- gd_nip_xpr %>% gs_read(ws = "programma_sleutels")
+  
+  audio_locaties <- gd_nip_xpr %>% gs_read(ws = "audio_locaties")
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Voeg componist-data toe aan track-info ----
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "componist_FM")) %>% 
-  select(
-    opnameNr,
-    catNr,
-    diskNr,
-    trackNr,
-    tijdvak,
-    nationaliteit,
-    componist_key,
-    componist_lbl,
-    titel,
-    bezetting,
-    uitvoerenden,
-    lengte,
-    album,
-    label,
-    labelcode,
-    van,
-    tot,
-    uzm_locatie,
-    -id,
-    - componist
-  ) %>% 
-  arrange(
-    opnameNr,
-    catNr,
-    diskNr,
-    trackNr
-  ) %>% 
-  mutate(trackNr = factor(trackNr, levels = unique(trackNr))) %>% 
-  group_by(opnameNr) %>% 
-  mutate(opnameVlgNr = dense_rank(trackNr)) 
+  source("src/compile_schedulerscript.R", encoding = "UTF-8")
+  
+  for (cur_pl in pl_nieuw$playlist) {
+    
+    cur_duur <- pl_duur %>% filter(playlist == cur_pl) %>% 
+      mutate(cur_duur_parm = paste0("Duration:", muzieklengte)) %>% 
+      select(cur_duur_parm) %>% 
+      unite(col = regel, sep = "\t")
 
-rm(ref_componisten)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # audiofile vd tune: staat onder de naam vd tune in audio_locaties; de naam vd tune staat onder de
+    # programma-titel in programma_sleutels; de programma-titel staat onder de playlist-naam in pl_nieuw
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    cur_pl_nieuw <- pl_nieuw %>% filter(playlist == cur_pl)
+    tune_sleutel <- programma_sleutels %>% filter(programma == cur_pl_nieuw$programma) %>% select(sleutel_tune)
+    tune_file <- audio_locaties %>% 
+      filter(sleutel == tune_sleutel$sleutel_tune, functie == "tune") %>% 
+      select(locatie) %>% 
+      mutate(locatie = paste0(home_vt_audio, locatie))
+    
+    cur_tune <- cur_pl %>% as_tibble %>% 
+      mutate(
+        duur = "",
+        audiofile = paste0("file://localhost", tune_file$locatie),
+        const_false = "FALSE",
+        start_sec_sinds_middernacht = as.integer(cur_pl_nieuw$start) * 3600,
+        fwdtab1 = "",
+        fwdtab2 = "",
+        fwdtab3 = "",
+        speler_regel01 = "tune",
+        opname_hfd_sub = "",
+        speler_regel02 = "") %>% 
+      select(-value) %>% 
+      unite(col = regel, sep = "\t")
+    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # audiofiles vd aankondiging van het programma als geheel: vt_uza_ + <programmatitel> + aan
+    # 2018-11-16: tune + uitzending_aan blijken gecombineerd te zijn. Onderstaande vervalt dus.
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    
+    # sleutel_vt_uza <- paste0("vt_uza_", cur_pl_nieuw$programma)
+    # vt_uza_file <- audio_locaties %>% filter(sleutel == sleutel_vt_uza, functie == "pres_alg_aan") %>% 
+    #   select(locatie) %>% 
+    #   mutate(locatie = paste0(home_vt_audio, locatie)) %>% 
+    #   str_replace_all(pattern = "<sleutel>", replacement = cur_pl_nieuw$programma)
+    # 
+    # cur_uitzending_aan <- cur_pl %>% as_tibble %>% 
+    #   mutate(
+    #     duur = "",
+    #     audiofile = paste0("file://localhost", vt_uza_file),
+    #     const_false = "FALSE",
+    #     start_sec_sinds_middernacht = -1, # "direct erna afspelen"
+    #     fwdtab1 = "",
+    #     fwdtab2 = "",
+    #     fwdtab3 = "",
+    #     speler_regel01 = "uitzending aan",
+    #     opname_hfd_sub = "",
+    #     speler_regel02 = ""
+    #   ) %>% 
+    #   select(-value) %>% 
+    #   unite(col = regel, sep = "\t")
 
-saveRDS(object = nipper, file = "resources/nipper.rds")
+    rlprg_file <- bind_rows(cur_duur, cur_tune)
+    
+    slot <- "slot" %>% as_tibble %>% setNames("vt_blok_letter")
+    blokken <- pl_tracks %>% filter(playlist == cur_pl) %>% distinct(vt_blok_letter) %>% 
+      bind_rows(slot)
+    playlist_id <- pl_nieuw %>% filter(playlist == cur_pl) %>% select(playlist_id) %>% slice(1)
+    vt_blok_pad <- audio_locaties %>% filter(sleutel == "vt_blok", functie == "pres_blok") %>% 
+      mutate(locatie = paste0(home_vt_audio, locatie)) %>% 
+      select(locatie) %>% str_replace_all(pattern = "<playlist-naam>", replacement = cur_pl) 
+    
+    for (blok in blokken$vt_blok_letter) {
+      cur_pres <- cur_pl %>% as_tibble %>% 
+        mutate(
+          duur = "",
+          audiofile = paste0("file://localhost", vt_blok_pad, playlist_id, "_", blok, ".aif"),
+          const_false = "FALSE",
+          start_sec_sinds_middernacht = -1, # "direct erna afspelen"
+          fwdtab1 = "",
+          fwdtab2 = "",
+          fwdtab3 = "",
+          speler_regel01 = "voicetracking",
+          opname_hfd_sub = "",
+          speler_regel02 = paste0("blok ", blok)
+        ) %>% 
+        select(-value) %>% 
+        unite(col = regel, sep = "\t")
+    
+      cur_tracks_in_blok <- pl_tracks %>% filter(playlist == cur_pl, vt_blok_letter == blok) %>% 
+        left_join(., pl_werken, by = c("playlist", "vt_blok_letter", "vt_blok_nr")) %>% 
+        mutate(
+          duur = "",
+          audiofile = paste0("file://localhost", uzm_locatie),
+          const_false = "FALSE",
+          start_sec_sinds_middernacht = -1, # "direct erna afspelen"
+          fwdtab1 = "",
+          fwdtab2 = "",
+          fwdtab3 = "",
+          speler_regel01 = componist_lbl,
+          opname_hfd_sub = paste0(opnameNr.x, "-", opnameVlgNr),
+          speler_regel02 = titel
+        ) %>% 
+        select(duur, audiofile, const_false, start_sec_sinds_middernacht, 
+               fwdtab1, fwdtab2, fwdtab3, speler_regel01, opname_hfd_sub, speler_regel02) %>% 
+        unite(col = regel, sep = "\t")
+      
+      rlprg_file %<>% bind_rows(cur_pres, cur_tracks_in_blok)
+    }
+    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # audiofiles vd afkondiging van het programma als geheel: vt_uza_ + <programmatitel> + af
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    sleutel_vt_uza <- paste0("vt_uza_", cur_pl_nieuw$programma)
+    
+    vt_uza_file <- audio_locaties %>% filter(sleutel == sleutel_vt_uza, functie == "pres_alg_af") %>% 
+      select(locatie) %>% 
+      mutate(locatie = paste0(home_vt_audio, locatie)) %>% 
+      str_replace_all(pattern = "<sleutel>", replacement = cur_pl_nieuw$programma)
+    
+    cur_uitzending_af <- cur_pl %>% as_tibble %>% 
+      mutate(
+        duur = "",
+        audiofile = paste0("file://localhost", vt_uza_file),
+        const_false = "FALSE",
+        start_sec_sinds_middernacht = -1, # "direct erna afspelen"
+        fwdtab1 = "",
+        fwdtab2 = "",
+        fwdtab3 = "",
+        speler_regel01 = "uitzending af",
+        opname_hfd_sub = "",
+        speler_regel02 = ""
+      ) %>% 
+      select(-value) %>% 
+      unite(col = regel, sep = "\t")
+    
+    rlprg_file %<>% bind_rows(cur_uitzending_af)
+    
+    cur_pl %<>% str_replace_all(pattern = "[.]", replacement = "-")
+    write.table(x = rlprg_file, file = paste0("resources/playlists/", cur_pl, ".rlprg"), 
+                row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
+    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    # scheduler-script samenstellen
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    build_rl_script(cur_pl)
+  }
 
-nipper_werk_links <- nipper %>% 
-  select(
-    opnameNr,
-    opnameVlgNr,
-    tijdvak,
-    nationaliteit,
-    componist_key,
-    componist_lbl,
-    titel,
-    bezetting,
-    uitvoerenden,
-    album
-  ) %>% 
-  filter(opnameVlgNr == 1) %>% 
-  select(-opnameVlgNr)
-
-nipper_werk <- left_join(nipper_werk_links, opnamelengte, by = "opnameNr") %>% 
-  select(
-    opnameNr,
-    tot_lengte_in_seconden,
-    tijdvak,
-    nationaliteit,
-    componist_key,
-    componist_lbl,
-    titel,
-    bezetting,
-    uitvoerenden,
-    album
-  ) %>% 
-  mutate(lengte = as.character(hms::as.hms(round(tot_lengte_in_seconden, digits = 0)))) %>% 
-  select(-tot_lengte_in_seconden)
-
-rm(nipper_werk_links)
-
-nipper_tracks <- nipper %>% 
-  select(
-    opnameNr,
-    opnameVlgNr,
-    uzm_locatie
-  )
-
-saveRDS(object = nipper_tracks, file = "resources/nipper_tracks.rds")
-
-nipper_todo <- nipper_werk %>% filter(tijdvak == "?") %>% 
-  group_by(componist_key) %>% 
-  summarize(n = n()) %>% 
-  arrange(desc(n))
-
-nipper_werk %<>% 
-  filter(tijdvak != "?") %>% 
-  select(tijdvak,
-         componist_lbl,
-         nationaliteit,
-         titel,
-         lengte,
-         bezetting,
-         uitvoerenden,
-         album,
-         opnameNr
-  ) %>% 
-  mutate(tijdvak = factor(tijdvak, levels = c("Middeleeuwen",
-                                              "Renaissance",
-                                              "Barok",
-                                              "Klassiek",
-                                              "Romantiek",
-                                              "Modern")
-                          )
-  ) %>% 
-  arrange(tijdvak,
-          componist_lbl,
-          titel,
-          lengte
-  ) 
-
-rm(filemakerTrackInfo, uzmTrackInfo, uzm_fm_schoon)
-
-write_delim(nipper_werk, config$nipper_werk, delim = "\U0009")
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Draaiboeken samenstellen
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+source("src/compile_hostscript_html.R", encoding = "UTF-8")  
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Nieuwe playlists afstempelen met aanmaakdatum. gs_edit_cells zou dat in 1 keer kunnen doen, mits de
+  # rijen 1 aaneengesloten blok vormen - wat niet zo is bij nieuwe playlists in het GD-tabblad
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  pl_anchor <- pl_nieuw %>% select(anchor)
+  samengesteld_op <- today(tzone = "Europe/Amsterdam")
+  
+  for (a1 in 1:nrow(pl_nieuw)) {
+    cur_anchor <- pl_anchor[a1, ] %>% as.character
+    gs_edit_cells(gd_nip_xpr, ws = "playlists", anchor = cur_anchor, input = samengesteld_op)
+  }
+  
+}
