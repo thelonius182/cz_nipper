@@ -30,7 +30,7 @@ for (d_pls in distinct_playlists) {
     input = "src/draaiboek_sjabloon_html_0.1.Rmd",
     output_format = "html_document",
     output_file = paste(d_pls, ".html", sep = ""),
-    output_dir = "resources/draaiboeken/"
+    output_dir = config$home_draaiboeken
   )
   
 }

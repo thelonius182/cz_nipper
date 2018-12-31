@@ -6,8 +6,18 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Init
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+library(tidyr)
+library(knitr)
+library(rmarkdown)
 library(googlesheets)
 library(RCurl)
+library(yaml)
+library(magrittr)
+library(stringr)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(fs)
 
 config <- read_yaml("config.yaml")
 
@@ -36,7 +46,9 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
   # Init config
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   host <- config$host
-  home_vt_audio <- home_prop("home_vt_audio")
+  home_vt_audio_mac <- home_prop("home_vt_audio_mac")
+  home_vt_audio_win  <- home_prop("home_vt_audio_win") %>% 
+    str_replace_all(pattern = "%20", replacement = " ")
   home_radiologik <- home_prop("home_radiologik")
   home_fonotheek <- home_prop("home_fonotheek")
 
@@ -134,7 +146,6 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
   source("src/compile_schedulerscript.R", encoding = "UTF-8")
   
   for (cur_pl in pl_nieuw$playlist) {
-    
     cur_duur <- pl_duur %>% filter(playlist == cur_pl) %>% 
       mutate(cur_duur_parm = paste0("Duration:", muzieklengte)) %>% 
       select(cur_duur_parm) %>% 
@@ -149,12 +160,12 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     tune_file <- audio_locaties %>% 
       filter(sleutel == tune_sleutel$sleutel_tune, functie == "tune") %>% 
       select(locatie) %>% 
-      mutate(locatie = paste0(home_vt_audio, locatie))
+      mutate(locatie = paste0(home_vt_audio_mac, locatie))
     
     cur_tune <- cur_pl %>% as_tibble %>% 
       mutate(
         duur = "",
-        audiofile = paste0("file://localhost", tune_file$locatie),
+        audiofile = paste0("file://", tune_file$locatie),
         const_false = "FALSE",
         start_sec_sinds_middernacht = as.integer(cur_pl_nieuw$start) * 3600,
         fwdtab1 = "",
@@ -180,7 +191,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     # cur_uitzending_aan <- cur_pl %>% as_tibble %>% 
     #   mutate(
     #     duur = "",
-    #     audiofile = paste0("file://localhost", vt_uza_file),
+    #     audiofile = paste0("file://", vt_uza_file),
     #     const_false = "FALSE",
     #     start_sec_sinds_middernacht = -1, # "direct erna afspelen"
     #     fwdtab1 = "",
@@ -196,18 +207,28 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     rlprg_file <- bind_rows(cur_duur, cur_tune)
     
     slot <- "slot" %>% as_tibble %>% setNames("vt_blok_letter")
+    
     blokken <- pl_tracks %>% filter(playlist == cur_pl) %>% distinct(vt_blok_letter) %>% 
       bind_rows(slot)
+    
     playlist_id <- pl_nieuw %>% filter(playlist == cur_pl) %>% select(playlist_id) %>% slice(1)
+    
     vt_blok_pad <- audio_locaties %>% filter(sleutel == "vt_blok", functie == "pres_blok") %>% 
-      mutate(locatie = paste0(home_vt_audio, locatie)) %>% 
+      mutate(locatie = paste0(home_vt_audio_mac, locatie)) %>% 
       select(locatie) %>% str_replace_all(pattern = "<playlist-naam>", replacement = cur_pl) 
+    
+    vt_blok_pad_win <- audio_locaties %>% filter(sleutel == "vt_blok", functie == "pres_blok") %>% 
+      mutate(locatie = paste0(home_vt_audio_win, locatie)) %>% 
+      select(locatie) %>% str_replace_all(pattern = "<playlist-naam>", replacement = cur_pl) %>% 
+      file.path
+      
+    dir_create(vt_blok_pad_win)
     
     for (blok in blokken$vt_blok_letter) {
       cur_pres <- cur_pl %>% as_tibble %>% 
         mutate(
           duur = "",
-          audiofile = paste0("file://localhost", vt_blok_pad, playlist_id, "_", blok, ".aif"),
+          audiofile = paste0("file://", vt_blok_pad, playlist_id, "_", blok, ".aif"),
           const_false = "FALSE",
           start_sec_sinds_middernacht = -1, # "direct erna afspelen"
           fwdtab1 = "",
@@ -224,7 +245,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
         left_join(., pl_werken, by = c("playlist", "vt_blok_letter", "vt_blok_nr")) %>% 
         mutate(
           duur = "",
-          audiofile = paste0("file://localhost", uzm_locatie),
+          audiofile = paste0("file://", uzm_locatie),
           const_false = "FALSE",
           start_sec_sinds_middernacht = -1, # "direct erna afspelen"
           fwdtab1 = "",
@@ -248,13 +269,13 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     
     vt_uza_file <- audio_locaties %>% filter(sleutel == sleutel_vt_uza, functie == "pres_alg_af") %>% 
       select(locatie) %>% 
-      mutate(locatie = paste0(home_vt_audio, locatie)) %>% 
+      mutate(locatie = paste0(home_vt_audio_mac, locatie)) %>% 
       str_replace_all(pattern = "<sleutel>", replacement = cur_pl_nieuw$programma)
     
     cur_uitzending_af <- cur_pl %>% as_tibble %>% 
       mutate(
         duur = "",
-        audiofile = paste0("file://localhost", vt_uza_file),
+        audiofile = paste0("file://", vt_uza_file),
         const_false = "FALSE",
         start_sec_sinds_middernacht = -1, # "direct erna afspelen"
         fwdtab1 = "",
@@ -270,8 +291,12 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     rlprg_file %<>% bind_rows(cur_uitzending_af)
     
     cur_pl %<>% str_replace_all(pattern = "[.]", replacement = "-")
-    write.table(x = rlprg_file, file = paste0("resources/playlists/", cur_pl, ".rlprg"), 
-                row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
+    
+    # zet de playlist in de programs-map van RL
+    home_radiologik_playlists <- paste0(home_prop("home_radiologik"), "Programs/")
+    rlprg_file_name <- paste0(home_radiologik_playlists, cur_pl, ".rlprg")
+    write.table(x = rlprg_file, file = rlprg_file_name, row.names = FALSE, col.names = FALSE, 
+                sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
     
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     # scheduler-script samenstellen

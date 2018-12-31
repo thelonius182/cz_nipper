@@ -3,10 +3,10 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 build_rl_script <- function(playlist) {
-  
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Info types samenstellen - zie tabblad "schedule_radiologik"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  # playlist <- "20181118_zo10.060_een_vroege_wandeling"
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  # Info types samenstellen - zie tabblad "schedule_radiologik"
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   # const_0
   sch01_C0 <- "Radiologik Schedule Segment" %>% as_tibble
   
@@ -70,11 +70,11 @@ build_rl_script <- function(playlist) {
   rlprg_file <- paste0(playlist, ".rlprg")
   sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
-  # fill
+  # fill (tijdelijk "play")
   # f_limiet <- rls_fill(playlist)
   # sch01_play <- paste("fill", "", f_limiet[1], f_limiet[2], "", 
   sch01_play <- paste("play", "", "", "", "", 
-                      "itunes_pl_aanvulling_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
+                      "nipper_aanvullen_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
   script_file <- bind_rows(sch01_C0, 
                            sch01_dag,
@@ -100,8 +100,13 @@ build_rl_script <- function(playlist) {
                            sch01_play
   )
   
-  write.table(x = script_file, file = paste0("resources/schedules/014 - ", playlist), 
-              row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
+  # zet het startscript voor de playlist in de schedules-map van RL, naam begint met
+  # een volgnummer: 1 + <aantal scripts in deze map>
+  home_radiologik_schedules <- paste0(home_prop("home_radiologik"), "Schedule/")
+  nrow_schedules <- 1L + dir_ls(path = home_radiologik_schedules) %>% as_tibble %>% nrow
+  script_file_name <- sprintf(paste0(home_radiologik_schedules, "%03d - ", playlist), nrow_schedules)
+  write.table(x = script_file, file = script_file_name, row.names = FALSE, col.names = FALSE, 
+              sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
 }
 
 rls_dagletters <- function(some_playlist) {
@@ -138,6 +143,14 @@ rls_venster <- function(some_playlist) {
   rls_venster_result <- c(venster_datum_start, venster_datum_stop)
 }
 
+# Een fill na een RL-playlist werkt anders werkt dan een fill na een gewone iTunes-playlist. 
+# Het verschil zit in de manier waarop Scheduler bepaalt hoeveel muziek er al klaargezet is 
+# na het laden van de playlist zelf, dus vóór het uitvoeren van de fill. 
+# Als het een iTunes-playlist is, neemt hij de actuele queue-lengte van de player. 
+# Als het een RL-playlist is, neemt hij de waarde die in de RL-playlist staat - de schatting dus. 
+# Daar zit het probleem. Omdat de schatting meestal te hoog is, wordt de aanvulling te kort. 
+# De fill daarom altijd uitvoeren met tracks van minstens 15 minuten. De playlist zal dan meestal 
+# veel te lang worden, maar de interrupt van het volgende programma zal hem op tijd uitfaden. 
 rls_fill <- function(some_playlist) {
   # some_playlist <- "20181231_wo00.420_de_nacht_klassiek"
   fill_start <- some_playlist %>% str_sub(15, 17) %>% as.integer %>% -1
