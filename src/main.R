@@ -307,7 +307,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   # Draaiboeken samenstellen
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-source("src/compile_hostscript_html.R", encoding = "UTF-8")  
+source("src/compile_hostscript_pdf.R", encoding = "UTF-8")  
   
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   # Nieuwe playlists afstempelen met aanmaakdatum. gs_edit_cells zou dat in 1 keer kunnen doen, mits de
