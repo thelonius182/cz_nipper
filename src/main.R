@@ -18,10 +18,12 @@ library(dplyr)
 library(purrr)
 library(lubridate)
 library(fs)
+library(readr)
+library(futile.logger)
+library(keyring)
+library(RMySQL)
 
-config <- read_yaml("config.yaml")
-
-source(config$toolbox, encoding = "UTF-8")
+filter <- dplyr::filter # voorkom verwarring met stats::filter
 
 home_prop <- function(prop) {
   prop_name <- paste0(prop, ".", host)
@@ -30,27 +32,40 @@ home_prop <- function(prop) {
     str_replace_all(pattern = "\\%2F", replacement = "/")
 }
 
-filter <-
-  dplyr::filter # voorkom verwarring met stats::filter
+flog.appender(appender.file("/Users/nipper/Logs/nipper.log"), name = "nipperlog")
+flog.info("= = = = = NIPPER start = = = = =", name = "nipperlog")
+
+config <- read_yaml("config.yaml")
+
+source(config$toolbox, encoding = "UTF-8")
+
+host <- config$host
+home_vt_audio_mac <- home_prop("home_vt_audio_mac")
+home_vt_audio_win  <- home_prop("home_vt_audio_win") %>% 
+  str_replace_all(pattern = "%20", replacement = " ")
+home_radiologik <- home_prop("home_radiologik")
+home_fonotheek <- home_prop("home_fonotheek")
+switch_home <- paste0(home_prop("home_schedulerswitch"), "/nipper_msg.txt")
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Stop RL-scheduler op de mac en wacht 5 seconden - stoppen duurt soms even
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+flog.info("RL-scheduler stoppen", name = "nipperlog")
+switch <- read_lines(file = switch_home)
+switch <- "stop RL-scheduler"
+write_lines(switch, path = switch_home, append = FALSE)
+
+Sys.sleep(time = 5)
+flog.info("RL-scheduler is gestopt", name = "nipperlog")
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 # Nipper Express spreadsheet op GD openen
+# NB!! zonodig: change to new user; er opent een browser dialogue
+#               gs_auth(new_user = TRUE)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# zonodig: change to new user; er opent een browser dialogue
-# gs_auth(new_user = TRUE)
 gd_nip_xpr <- gs_title(config$nip_xpr_gd_reg)
 
 for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan worden
-
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Init config
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  host <- config$host
-  home_vt_audio_mac <- home_prop("home_vt_audio_mac")
-  home_vt_audio_win  <- home_prop("home_vt_audio_win") %>% 
-    str_replace_all(pattern = "%20", replacement = " ")
-  home_radiologik <- home_prop("home_radiologik")
-  home_fonotheek <- home_prop("home_fonotheek")
 
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   # Kijk in werkblad "playlists" welke nieuwe playlists er moeten komen
@@ -68,7 +83,8 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     filter(!is.na(vt_blok)) %>% 
     # splits de voice-tracking blokken in letter en volgnummer, om bij sorteren te verhinderen 
     # dat blok A10 meteen na blok A1 komt
-    mutate(vt_blok_letter = str_sub(vt_blok, start = 1, end = 1), vt_blok_nr = as.integer(str_sub(vt_blok, start = 2))) %>% 
+    mutate(vt_blok_letter = str_sub(vt_blok, start = 1, end = 1), 
+           vt_blok_nr = as.integer(str_sub(vt_blok, start = 2))) %>% 
     select(-tot_time, -op_huidige_pl, -keuze, -vt_blok) %>% 
     arrange(playlist, vt_blok_letter, vt_blok_nr)
   
@@ -79,7 +95,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     select(playlist_id, playlist, programma, start, anchor)
   
   if(nrow(pl_nieuw) == 0){
-    print("Er zijn geen nieuwe playlists.")
+    flog.info("Er zijn geen nieuwe playlists", name = "nipperlog")
     break
   }
   
@@ -91,9 +107,10 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     summarise(n_dubbel = n()) %>% 
     filter(n_dubbel > 1) %>% select(-n_dubbel)
   
-  if(nrow(dubbele_blokken) > 0){
-    print("Sommige blokken zijn dubbel benoemd")
-    unite(data = dubbele_blokken, col = regel, sep = " ")
+  if(nrow(dubbele_blokken) > 0) {
+    err_dubbele_blokken <- unite(data = dubbele_blokken, col = regel, sep = " ")
+    flog.info("Sommige blokken zijn dubbel benoemd: %s\ngeen playlists etc. gemaakt.", 
+              err_dubbele_blokken, name = "nipperlog")
     break
   }
   
@@ -298,20 +315,25 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     write.table(x = rlprg_file, file = rlprg_file_name, row.names = FALSE, col.names = FALSE, 
                 sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
     
+    flog.info("RL-playlist toegevoegd: %s", rlprg_file_name, name = "nipperlog")
+    
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     # scheduler-script samenstellen
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     build_rl_script(cur_pl)
+    
+    flog.info("RL-schedulerscript toegevoegd voor %s", cur_pl, name = "nipperlog")
   }
 
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Draaiboeken samenstellen
+  # Draaiboeken en gids samenstellen
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-source("src/compile_hostscript_pdf.R", encoding = "UTF-8")  
+  source("src/compile_hostscript_pdf.R", encoding = "UTF-8")  
+  # source("src/update_gids.R", encoding = "UTF-8")  
   
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   # Nieuwe playlists afstempelen met aanmaakdatum. gs_edit_cells zou dat in 1 keer kunnen doen, mits de
-  # rijen 1 aaneengesloten blok vormen - wat niet zo is bij nieuwe playlists in het GD-tabblad
+  # rijen 1 aaneengesloten blok vormen - wat niet per se zo is bij nieuwe playlists in het GD-tabblad
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   pl_anchor <- pl_nieuw %>% select(anchor)
   samengesteld_op <- today(tzone = "Europe/Amsterdam")
@@ -320,5 +342,14 @@ source("src/compile_hostscript_pdf.R", encoding = "UTF-8")
     cur_anchor <- pl_anchor[a1, ] %>% as.character
     gs_edit_cells(gd_nip_xpr, ws = "playlists", anchor = cur_anchor, input = samengesteld_op)
   }
-  
 }
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Start RL-scheduler op de mac, zodat de nieuwe scripts ingelezen worden
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+switch <- read_lines(file = switch_home)
+switch <- "start RL-scheduler"
+write_lines(switch, path = switch_home, append = FALSE)
+flog.info("RL-scheduler draait weer", name = "nipperlog")
+
+flog.info("= = = = = NIPPER stop = = = = =", name = "nipperlog")

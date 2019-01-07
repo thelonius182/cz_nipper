@@ -26,11 +26,14 @@ for (d_pls in distinct_playlists) {
     left_join(drbk, by = c("playlist", "vt_blok_letter")) %>% 
     left_join(pl_nieuw, by = c("playlist"))
   
+  drb_naam <- paste(d_pls, ".pdf", sep = "")
+  
   rmarkdown::render(
     input = "src/draaiboek_sjabloon_1.0.Rmd",
     output_format = "pdf_document",
-    output_file = paste(d_pls, ".pdf", sep = ""),
+    output_file = drb_naam,
     output_dir = config$home_draaiboeken
   )
   
+  flog.info("Draaiboek toegevoegd: %s", drb_naam, name = "nipperlog")
 }
