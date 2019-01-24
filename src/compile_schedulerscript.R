@@ -70,10 +70,8 @@ build_rl_script <- function(playlist) {
   rlprg_file <- paste0(playlist, ".rlprg")
   sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
-  # fill (tijdelijk "play")
-  # f_limiet <- rls_fill(playlist)
-  # sch01_play <- paste("fill", "", f_limiet[1], f_limiet[2], "", 
-  sch01_play <- paste("play", "", "", "", "", 
+  # aanvulling (aanvullijst bevat altijd maar 1 stuk)
+  sch01_play <- paste("play", "", "",          "",          "",
                       "nipper_aanvullen_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
   script_file <- bind_rows(sch01_C0, 
