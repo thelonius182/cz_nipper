@@ -9,7 +9,7 @@ uzmTrackInfo <- read_delim("resources/archief01_tracks.txt",
                            "\t",
                            escape_double = FALSE,
                            trim_ws = TRUE,
-                           col_names = c("track", "dir", "lengte")
+                           col_names = c("track", "dir", "lengte_uzm")
                            ) %>% 
   arrange(dir, track)
 
@@ -77,7 +77,7 @@ uzmTrackInfo %<>%
 # Alleen de relevante variabelen overhouden + sorteren + ontdubbelen
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 uzmTrackInfo %<>%
-  select(catNr, diskNr, trackNr, album, lengte, uzm_locatie) %>%
+  select(catNr, diskNr, trackNr, album, lengte_uzm, uzm_locatie) %>%
   # parent folder vd audio verwijderen zodat audio ook op andere servers kan staan
   arrange(catNr, diskNr, trackNr) %>%
   distinct(catNr, diskNr, trackNr, .keep_all = TRUE)

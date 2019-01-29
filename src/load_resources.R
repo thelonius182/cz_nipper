@@ -5,6 +5,24 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Init
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+library(tidyr)
+library(knitr)
+library(rmarkdown)
+library(googlesheets)
+library(RCurl)
+library(yaml)
+library(magrittr)
+library(stringr)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(fs)
+library(readr)
+library(futile.logger)
+library(keyring)
+library(RMySQL)
+library(officer)
+
 config <- read_yaml("config.yaml")
 
 source(config$toolbox, encoding = "UTF-8")
@@ -56,7 +74,8 @@ nipper <- left_join(uzm_fm_schoon, ref_componisten, by = c("componist" = "compon
     titel,
     bezetting,
     uitvoerenden,
-    lengte,
+    lengte_uzm,
+    lengte_fm,
     album,
     label,
     labelcode,
@@ -84,6 +103,8 @@ nipper_werk_links <- nipper %>%
   select(
     opnameNr,
     opnameVlgNr,
+    catNr, 
+    diskNr,
     tijdvak,
     nationaliteit,
     componist_key,
@@ -91,15 +112,23 @@ nipper_werk_links <- nipper %>%
     titel,
     bezetting,
     uitvoerenden,
+    lengte_fm,
     album
   ) %>% 
   filter(opnameVlgNr == 1) %>% 
   select(-opnameVlgNr)
 
 nipper_werk <- left_join(nipper_werk_links, opnamelengte, by = "opnameNr") %>% 
+  mutate(fm_uzm_delta = round(abs(tot_lengte_in_seconden - lengte_fm), digits = 0),
+         lengte_uzm = as.character(hms::as.hms(round(tot_lengte_in_seconden, digits = 0))),
+         lengte_fm = as.character(hms::as.hms(round(lengte_fm, digits = 0)))) %>% 
   select(
     opnameNr,
-    tot_lengte_in_seconden,
+    catNr,
+    diskNr,
+    lengte_fm,
+    lengte_uzm,
+    fm_uzm_delta,
     tijdvak,
     nationaliteit,
     componist_key,
@@ -108,10 +137,14 @@ nipper_werk <- left_join(nipper_werk_links, opnamelengte, by = "opnameNr") %>%
     bezetting,
     uitvoerenden,
     album
-  ) %>% 
-  mutate(lengte = as.character(hms::as.hms(round(tot_lengte_in_seconden, digits = 0)))) %>% 
-  select(-tot_lengte_in_seconden)
+  ) 
 
+nipper_werk_delta <- nipper_werk %>% 
+  select(catNr, diskNr, opnameNr, fm_uzm_delta) %>% 
+  group_by(catNr, diskNr) %>% 
+  summarise(median_delta = median(fm_uzm_delta)) %>% 
+  filter(median_delta > 15.0)
+  
 rm(nipper_werk_links)
 
 nipper_tracks <- nipper %>% 
@@ -134,10 +167,12 @@ nipper_werk %<>%
          componist_lbl,
          nationaliteit,
          titel,
-         lengte,
+         lengte = lengte_uzm,
          bezetting,
          uitvoerenden,
          album,
+         catNr, 
+         diskNr,
          opnameNr
   ) %>% 
   mutate(tijdvak = factor(tijdvak, levels = c("Middeleeuwen",
@@ -154,6 +189,12 @@ nipper_werk %<>%
           lengte
   ) 
 
-rm(filemakerTrackInfo, uzmTrackInfo, uzm_fm_schoon)
+deletables <- nipper_werk_delta %>% left_join(nipper_werk) %>% select(opnameNr)
+
+nipper_werk %<>% 
+  filter(!opnameNr %in% deletables$opnameNr) %>% 
+  select(-catNr, -diskNr)
 
 write_delim(nipper_werk, config$nipper_werk, delim = "\U0009")
+
+rm(filemakerTrackInfo, uzmTrackInfo, uzm_fm_schoon, deletables, nipper_werk_delta)

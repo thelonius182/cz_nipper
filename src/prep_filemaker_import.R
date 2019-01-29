@@ -17,15 +17,18 @@ filemakerTrackInfo <-
          & !str_detect(componist, "-|--|\\(")
          & str_detect(`cz-catalogusnummer`, "^C\\d+")
   ) %>% 
+  mutate(hh = if_else(is.na(h), 0, as.numeric(h) * 3600L),
+         mm = if_else(is.na(m), 0, as.numeric(m) * 60L),
+         ss = if_else(is.na(s), 0, as.numeric(s)),
+         lengte_fm = hh + mm + ss
+  ) %>%
   select(
     componist,
     titel,
     czid = `cz-catalogusnummer`,
     album = `cd-of-lp-naam`,
     tracks = tracknummers,
-    hh = h,
-    mm = m,
-    ss = s,
+    lengte_fm,
     bezetting,
     uitvoerenden = `uitvoerenden-1`,
     label,
@@ -96,7 +99,7 @@ filemakerTrackInfo %<>%
   ) %>% 
   filter(!is.na(trackBeg) & catNr > 0) %>% 
   select(catNr, diskNr, trackBeg, trackEnd, componist, titel, 
-         bezetting, uitvoerenden, label, labelcode) %>% 
+         bezetting, uitvoerenden, lengte_fm, label, labelcode) %>% 
   arrange(catNr, diskNr, trackBeg) %>% 
   distinct(catNr, diskNr, trackBeg, .keep_all = TRUE)
 

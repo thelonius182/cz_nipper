@@ -35,7 +35,8 @@ uzm_fm_schoon <-
     trackEnd,
     componist,
     titel,
-    lengte,
+    lengte_uzm,
+    lengte_fm,
     album,
     bezetting,
     uitvoerenden,
@@ -74,4 +75,4 @@ rm(uzm_fm_bruikbaar, uzm_fm_vuil, tmp_opnameNr, i1, opnNr, opnNr_sav)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 opnamelengte <- uzm_fm_schoon %>% 
   group_by(opnameNr) %>% 
-  summarise(tot_lengte_in_seconden = sum(lengte))
+  summarise(tot_lengte_in_seconden = sum(lengte_uzm))
