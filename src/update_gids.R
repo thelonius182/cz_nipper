@@ -5,10 +5,14 @@ playlist2postdate <- function(playlist) {
 }
 
 get_wp_conn <- function() {
-  db_user <- key_get(service = "sql-wpdev_user")
-  db_password <- key_get(service = "sql-wpdev_pwd")
-  db_name <- key_get(service = "sql-wpdev_db")
-  db_host <-  "127.0.0.1"
+  db_type <- "prd"
+  if (config$host == "logmac") {
+    db_type <- "dev"
+  }
+  db_host <- key_get(service = paste0("sql-wp", db_type, "_host"))
+  db_user <- key_get(service = paste0("sql-wp", db_type, "_user"))
+  db_password <- key_get(service = paste0("sql-wp", db_type, "_pwd"))
+  db_name <- key_get(service = paste0("sql-wp", db_type, "_db"))
   db_port <- 3306
   db_table <- "cz.wp_posts"
   flog.appender(appender.file("/Users/nipper/Logs/nipper.log"), name = "nipperlog")
@@ -97,7 +101,7 @@ for (seg2 in 1:1) {
       upd_stmt03 <- sprintf(
         "insert into wp_postmeta (post_id, meta_key, meta_value) values(%i, '_thumbnail_id', %i);",
         dsSql01$id[u1],
-        426993
+        463848
       )
       dbGetQuery(wp_conn, upd_stmt03)
     }
