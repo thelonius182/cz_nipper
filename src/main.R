@@ -101,7 +101,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
   }
   
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Alleen playlists maken als alle blokken uniek genummerd zijn
+  # Alleen playlists maken als alle blokken uniek genummerd zijn en er geen ontbreekt
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   dubbele_blokken <- pl_werken %>% 
     group_by(playlist, vt_blok_letter, vt_blok_nr) %>% 
@@ -109,9 +109,26 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     filter(n_dubbel > 1) %>% select(-n_dubbel)
   
   if(nrow(dubbele_blokken) > 0) {
-    err_dubbele_blokken <- unite(data = dubbele_blokken, col = regel, sep = " ")
+    err_blokken <- unite(data = dubbele_blokken, col = regel, sep = " ")
     flog.info("Sommige blokken zijn dubbel benoemd: %s\ngeen playlists etc. gemaakt.", 
-              err_dubbele_blokken, name = "nipperlog")
+              err_blokken, name = "nipperlog")
+    break
+  }
+  
+  ontbrekende_blokken <-
+    pl_werken %>% select(playlist, vt_blok_letter, vt_blok_nr) %>%
+    group_by(playlist, vt_blok_letter) %>%
+    summarise(
+      grp_count = n(),
+      grp_min = min(vt_blok_nr),
+      grp_max = max(vt_blok_nr)
+    ) %>%
+    filter(grp_max != grp_count | grp_min != 1)
+  
+  if(nrow(ontbrekende_blokken) > 0) {
+    err_blokken <- unite(data = ontbrekende_blokken, col = regel, sep = " ")
+    flog.info("Sommige blokken ontbreken: %s\ngeen playlists etc. gemaakt.", 
+              err_blokken, name = "nipperlog")
     break
   }
   
@@ -130,9 +147,9 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     # 'speling': 00:50 tune+uitzending_aan/af
     #            00:30 minimum aanvulling, 
     #            05:00 maximum aanvulling, 
-    #            00:40 presentatie per blok af+aan
-    mutate(speling_min = 50 +  30 + 40 * blokken, 
-           speling_max = 50 + 300 + 40 * blokken,
+    #            00:27 presentatie per blok af+aan
+    mutate(speling_min = 50 +  30 + 27 * blokken, 
+           speling_max = 50 + 300 + 27 * blokken,
            slotlengte = 60 * as.integer(str_sub(playlist, start = 15, end = 17)),
            muziek_min = slotlengte - speling_max,
            muziek_max = slotlengte - speling_min,

@@ -71,10 +71,10 @@ build_rl_script <- function(playlist) {
   sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
   # aanvulling (aanvullijst bevat altijd maar 1 stuk)
-  sch01_play <- paste("play", "", "",          "",          "",
+  sch01_play <- paste("pick", "", "",          "",          "r",
                       "nipper_aanvullen_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
   
-  script_file <- bind_rows(sch01_C0, 
+  script_file <- bind_rows(sch01_C0,
                            sch01_dag,
                            sch01_lengte,
                            sch01_dj_voorkeur, 
@@ -98,7 +98,7 @@ build_rl_script <- function(playlist) {
                            sch01_play
   )
   
-  # zet het startscript voor de playlist in de schedules-map van RL, naam begint met
+  # zet de startscripts voor de playlists in de schedules-map van RL, naam begint met
   # een volgnummer: 1 + <aantal scripts in deze map>
   home_radiologik_schedules <- paste0(home_prop("home_radiologik"), "Schedule/")
   nrow_schedules <- 1L + dir_ls(path = home_radiologik_schedules) %>% as_tibble %>% nrow
@@ -134,13 +134,14 @@ rls_30m_blokken <- function(some_playlist){
 rls_venster <- function(some_playlist) {
   # some_playlist <- "20181231_wo00.420_de_nacht_klassiek"
   venster_datum_start <- str_sub(some_playlist, 1, 8) %>% ymd
-  venster_datum_stop <- venster_datum_start + days(1)
+  venster_datum_stop <- venster_datum_start + days(8)
   rl_date_fmt <- stamp_date("23 mrt. 2018")
   venster_datum_start %<>% rl_date_fmt %>% str_replace(pattern = "mei\\.", replacement = "mei ")
   venster_datum_stop %<>% rl_date_fmt %>% str_replace(pattern = "mei\\.", replacement = "mei ")
   rls_venster_result <- c(venster_datum_start, venster_datum_stop)
 }
 
+# rls_fill is disabled! Want:
 # Een fill na een RL-playlist werkt anders werkt dan een fill na een gewone iTunes-playlist. 
 # Het verschil zit in de manier waarop Scheduler bepaalt hoeveel muziek er al klaargezet is 
 # na het laden van de playlist zelf, dus vóór het uitvoeren van de fill. 

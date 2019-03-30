@@ -17,8 +17,7 @@ get_wp_conn <- function() {
   db_table <- "cz.wp_posts"
   flog.appender(appender.file("/Users/nipper/Logs/nipper.log"), name = "nipperlog")
   
-  result <- tryCatch(
-    {
+  result <- tryCatch( {
       grh_conn <- dbConnect(drv = MySQL(), user = db_user, password = db_password,
                             dbname = db_name, host = db_host, port = db_port)
     },
@@ -26,7 +25,7 @@ get_wp_conn <- function() {
       flog.error("Wordpress database onbereikbaar (dev: check PuTTY)", name = "nipperlog")
       return("connection-error")
     }
-  )    
+  )
   return(result)
 }
 
@@ -41,7 +40,7 @@ for (seg2 in 1:1) {
   
   # gidsgegevens klaarzetten ------------------------------------------------
   dummy_vt <- pl_werken %>% filter(vt_blok_nr == 1) %>% 
-    mutate(vt_blok_nr = 0, lengte = hms::as.hms(40))
+    mutate(vt_blok_nr = 0, lengte = hms::as.hms(27))
   
   drb_gids <- rbind(pl_werken, dummy_vt) %>%
     arrange(playlist, vt_blok_letter, vt_blok_nr) %>% group_by(playlist) %>%
@@ -60,19 +59,23 @@ for (seg2 in 1:1) {
   for (cur_pl in pl_nieuw$playlist) {
     sql_post_date <- playlist2postdate(cur_pl) %>% as.character
     drb_gids_pl <- drb_gids %>% filter(playlist == cur_pl)
-    sql_gidstekst <- dbEscapeStrings(wp_conn, enc2native(config$gids_samenvatting))
+    
+    koptekst <- drb_gids_pl %>% select(playlist, componist_lbl) %>% distinct %>% 
+      group_by(playlist) %>% summarise(werken_van = paste(componist_lbl, collapse = ", "))
+    regel <- sprintf('Werken van %s.\n<!--more-->\n', koptekst$werken_van)
+    sql_gidstekst <- paste0(dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
+    
     regel <- '<style>td {padding: 6px; text-align: left;}</style>\n<table style="width: 100%;"><tbody>'
     sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
     
     for (q1 in 1:nrow(drb_gids_pl)) {
-      regel <- sprintf('<tr>\n<td>[track tijd="%s" text="%s (%s)"]\n<span style="color: #65656e;">',
+      regel <- sprintf('<tr>\n<td>[track tijd="%s" text="%s (%s)"]\n<span>',
                        drb_gids_pl$cum_tijd[q1],
                        drb_gids_pl$titel[q1],
-                       str_sub(drb_gids_pl$lengte[q1], 4))
+                       drb_gids_pl$cum_tijd[q1])
       sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)))
       
-      regel <- paste0(drb_gids_pl$componist_lbl[q1], " (", drb_gids_pl$nationaliteit[q1], " - ",
-                      drb_gids_pl$tijdvak[q1], ")")
+      regel <- drb_gids_pl$componist_lbl[q1]
       sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
       
       regel <- sprintf('%s</span></td>\n</tr>',
