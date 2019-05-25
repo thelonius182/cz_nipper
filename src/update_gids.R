@@ -40,7 +40,7 @@ for (seg2 in 1:1) {
   
   # gidsgegevens klaarzetten ------------------------------------------------
   dummy_vt <- pl_werken %>% filter(vt_blok_nr == 1) %>% 
-    mutate(vt_blok_nr = 0, lengte = hms::as.hms(27))
+    mutate(vt_blok_nr = 0, lengte = hms::as.hms(40))
   
   drb_gids <- rbind(pl_werken, dummy_vt) %>%
     arrange(playlist, vt_blok_letter, vt_blok_nr) %>% group_by(playlist) %>%

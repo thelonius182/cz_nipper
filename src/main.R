@@ -147,9 +147,9 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     # 'speling': 00:50 tune+uitzending_aan/af
     #            00:30 minimum aanvulling, 
     #            05:00 maximum aanvulling, 
-    #            00:27 presentatie per blok af+aan
-    mutate(speling_min = 50 +  30 + 27 * blokken, 
-           speling_max = 50 + 300 + 27 * blokken,
+    #            00:40 presentatie per blok af+aan
+    mutate(speling_min = 50 +  30 + 40 * blokken, 
+           speling_max = 50 + 300 + 40 * blokken,
            slotlengte = 60 * as.integer(str_sub(playlist, start = 15, end = 17)),
            muziek_min = slotlengte - speling_max,
            muziek_max = slotlengte - speling_min,

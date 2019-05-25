@@ -13,7 +13,7 @@ draaiboek <- pl_werken %>%
 drbk <- pl_werken %>%
   group_by(playlist, vt_blok_letter) %>% 
   summarise(bloklengte = sum(lengte)) %>% 
-  mutate(bloklengte = bloklengte + 27, # per blok 27 seconden presentatie
+  mutate(bloklengte = bloklengte + 40, # per blok 40 seconden presentatie
          cum_lengte = cumsum(as.integer(bloklengte)))
 
 drbk$cum_lengte <- np_sec2hms(drbk$cum_lengte)
