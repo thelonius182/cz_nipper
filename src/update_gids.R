@@ -4,6 +4,14 @@ playlist2postdate <- function(playlist) {
   result <- paste0(tmp_date, " ", tmp_time) %>% ymd_hms
 }
 
+get_wallclock <- function(pm_cum_tijd, pm_playlist) {
+  cum_tijd_ts <- paste0("2019-01-01 ", pm_cum_tijd) %>% ymd_hms
+  start_clock <- pm_playlist %>% str_sub(12, 13) %>% as.integer
+  wallclcok_ts <- cum_tijd_ts + hours(start_clock)
+  wallclock_ts_rounded <- wallclcok_ts %>% round_date("minute")
+  wallclock <- wallclock_ts_rounded %>% as.character %>% str_sub(12, 16)
+}
+
 get_wp_conn <- function() {
   db_type <- "prd"
   if (config$host == "logmac") {
@@ -48,9 +56,10 @@ for (seg2 in 1:1) {
       cum_tijd = np_sec2hms(cumsum(as.duration(lengte))),
       # cum_tijd_secs = seconds(cumsum(as.duration(lengte)) %% 60),
       # cum_tijd_secs2min = ifelse(cum_tijd_secs > 30, 1, 0),
-      cum_tijd = lag(cum_tijd, n = 1)
+      cum_tijd = lag(cum_tijd, n = 1),
       # cum_tijd_secs = lag(cum_tijd_secs, n = 1),
       # cum_tijd_secs2min = lag(cum_tijd_secs2min, n = 1)
+      wallclock = get_wallclock(pm_cum_tijd = cum_tijd, pm_playlist = playlist)
     ) %>% filter(vt_blok_nr != 0) %>% 
     select(-bezetting, -album, -opnameNr, -starts_with("vt_"))
   
@@ -69,10 +78,13 @@ for (seg2 in 1:1) {
     sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
     
     for (q1 in 1:nrow(drb_gids_pl)) {
-      regel <- sprintf('<tr>\n<td>[track tijd="%s" text="%s (%s)"]\n<span>',
-                       drb_gids_pl$cum_tijd[q1],
-                       drb_gids_pl$titel[q1],
-                       drb_gids_pl$cum_tijd[q1])
+      regel <-
+        sprintf(
+          '<tr>\n<td>[track tijd="%s" text="%s %s"]\n<span>',
+          drb_gids_pl$cum_tijd[q1],
+          drb_gids_pl$wallclock[q1],
+          drb_gids_pl$titel[q1]
+        )
       sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)))
       
       regel <- drb_gids_pl$componist_lbl[q1]
