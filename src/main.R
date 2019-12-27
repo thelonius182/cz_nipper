@@ -1,10 +1,4 @@
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# Genereer RL-playlists, -schedules, draaiboeken en gidsvermeldingen..
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Init
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Create RL-playlists, -schedules, presentation scripts and website posts  ----
 library(tidyr)
 library(knitr)
 library(rmarkdown)
@@ -35,6 +29,7 @@ home_prop <- function(prop) {
 flog.appender(appender.file("/Users/nipper/Logs/nipper.log"), name = "nipperlog")
 flog.info("= = = = = NIPPER start = = = = =", name = "nipperlog")
 
+# Init ----
 config <- read_yaml("config.yaml")
 
 source(config$toolbox, encoding = "UTF-8")
@@ -47,9 +42,7 @@ home_radiologik <- home_prop("home_radiologik")
 home_fonotheek <- home_prop("home_fonotheek")
 switch_home <- paste0(home_prop("home_schedulerswitch"), "/nipper_msg.txt")
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Stop RL-scheduler op de mac en wacht 5 seconden - stoppen duurt soms even
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Stop RL-scheduler ----
 flog.info("RL-scheduler stoppen", name = "nipperlog")
 switch <- read_lines(file = switch_home)
 switch <- "stop RL-scheduler"
@@ -58,27 +51,25 @@ write_lines(switch, path = switch_home, append = FALSE)
 Sys.sleep(time = 5)
 flog.info("RL-scheduler is gestopt", name = "nipperlog")
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Nipper Express spreadsheet op GD openen
-# NB!! zonodig: change to new user; er opent een browser dialogue
-#               gs_auth(new_user = TRUE)
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-gd_nip_xpr <- gs_title(config$nip_xpr_gd_reg)
 
-for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan worden
+for (seg1 in 1:1) { # create break-able segment
 
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Kijk in werkblad "playlists" welke nieuwe playlists er moeten komen
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  pl_nieuw <- gd_nip_xpr %>% 
-    gs_read(ws = "playlists") %>% 
+  # prep nipper-express tables ---- 
+  source("src/get_google_czdata.R", encoding = "UTF-8")
+  #+ repair length-field ----
+  tbl_nipper_select.I <- tbl_nipper_select %>% 
+    mutate(lengte = duration(num = 3600L * hour(lengte) 
+                                 + 60L * minute(lengte) 
+                                 + 1L * second(lengte), 
+                             units = "second")) 
+  
+  # get playlists to broadcast ----
+  # marked by sheet "playlists.samengesteld_op = NULL" 
+  pl_nieuw  <- tbl_nipper_playlists %>% 
     filter(is.na(samengesteld_op), !is.na(playlist))
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Haal de werken op 
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  pl_werken <- gd_nip_xpr %>% 
-    gs_read(ws = "nipper-select") %>% 
+  # get compositions ----
+  pl_werken <- tbl_nipper_select.I %>% 
     filter(playlist %in% pl_nieuw$playlist) %>% 
     filter(!is.na(keuze)) %>% 
     # splits de voice-tracking blokken in letter en volgnummer, om bij sorteren te verhinderen 
@@ -89,9 +80,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     select(-tot_time, -keuze, -vt_blok) %>% 
     arrange(playlist, vt_blok_letter, vt_blok_nr)
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Alleen playlists maken waar ook echt wat in staat
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # skip empty playlists ----
   pl_nieuw %<>% filter(playlist %in% pl_werken$playlist) %>% 
     select(playlist_id, playlist, programma, start, anchor)
   
@@ -100,9 +89,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     break
   }
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Alleen playlists maken als alle blokken uniek genummerd zijn en er geen ontbreekt
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  ## check invalid playlists: unique block-id's ----
   dubbele_blokken <- pl_werken %>% 
     group_by(playlist, vt_blok_letter, vt_blok_nr) %>% 
     summarise(n_dubbel = n()) %>% 
@@ -115,6 +102,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     break
   }
   
+  ##+ missing block-id's ----
   ontbrekende_blokken <-
     pl_werken %>% select(playlist, vt_blok_letter, vt_blok_nr) %>%
     group_by(playlist, vt_blok_letter) %>%
@@ -132,15 +120,10 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
     break
   }
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Bepaal de playlist lengtes
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # calculate block lengths ----
   pl_duur <- pl_werken %>% 
     group_by(playlist, vt_blok_letter) %>% 
-    summarise(blokduur = sum(lengte)) %>% 
-    # blokduur omzetten in seconden: seconds(hms = 00:05:00) = 300S
-    #                                as.integer(300S) = 300
-    mutate(blokduur_sec = as.integer(seconds(blokduur))) %>% 
+    summarise(blokduur_sec = sum(lengte)) %>% 
     group_by(playlist) %>% 
     summarise(blokken = n(),
               muzieklengte = sum(blokduur_sec)) %>% 
@@ -159,9 +142,7 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
            )
     )
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Haal de tracks op
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # get the tracks ----
   nipper_tracks <- readRDS("resources/nipper_tracks.rds") %>% distinct
   
   pl_tracks <- pl_werken %>% 
@@ -171,12 +152,9 @@ for (seg1 in 1:1) { # zorgt voor een script-segment dat met "break" verlaten kan
            uzm_locatie = paste0(home_fonotheek, uzm_locatie),
            uzm_locatie = str_replace_all(uzm_locatie, pattern = "\\%2F", replacement = "/"))
            
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # RL-playlist samenstellen
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  programma_sleutels <- gd_nip_xpr %>% gs_read(ws = "programma_sleutels")
-  
-  audio_locaties <- gd_nip_xpr %>% gs_read(ws = "audio_locaties")
+  # compile the RL-playlist ----
+  programma_sleutels <- tbl_nipper_keys
+  audio_locaties <- tbl_nipper_audiolocaties
 
   source("src/compile_schedulerscript.R", encoding = "UTF-8")
   
