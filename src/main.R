@@ -80,7 +80,8 @@ for (seg1 in 1:1) { # create break-able segment
     select(-tot_time, -keuze, -vt_blok) %>% 
     arrange(playlist, vt_blok_letter, vt_blok_nr)
   
-  # skip empty playlists ----
+  #+ validate ... ----
+  #+... empty playlists ----
   pl_nieuw %<>% filter(playlist %in% pl_werken$playlist) %>% 
     select(playlist_id, playlist, programma, start, anchor)
   
@@ -89,7 +90,7 @@ for (seg1 in 1:1) { # create break-able segment
     break
   }
   
-  ## check invalid playlists: unique block-id's ----
+  #+... non-unique block-id's ----
   dubbele_blokken <- pl_werken %>% 
     group_by(playlist, vt_blok_letter, vt_blok_nr) %>% 
     summarise(n_dubbel = n()) %>% 
@@ -102,7 +103,7 @@ for (seg1 in 1:1) { # create break-able segment
     break
   }
   
-  ##+ missing block-id's ----
+  ##+... missing block-id's ----
   ontbrekende_blokken <-
     pl_werken %>% select(playlist, vt_blok_letter, vt_blok_nr) %>%
     group_by(playlist, vt_blok_letter) %>%
@@ -136,12 +137,29 @@ for (seg1 in 1:1) { # create break-able segment
            slotlengte = 60 * as.integer(str_sub(playlist, start = 15, end = 17)),
            muziek_min = slotlengte - speling_max,
            muziek_max = slotlengte - speling_min,
-           vulling = case_when(muzieklengte > muziek_max ~ paste0("rood (+", muzieklengte - muziek_max, "s)"),
+           vulling = case_when(muzieklengte > muziek_max ~ paste0("rood (+", 
+                                                                  muzieklengte - muziek_max, 
+                                                                  "s)"),
                                muzieklengte > muziek_min ~ "groen",
-                               TRUE                      ~ paste0("geel (-", muziek_min - muzieklengte, "s)")
+                               TRUE                      ~ paste0("geel (-", 
+                                                                  muziek_min - muzieklengte, 
+                                                                  "s)")
            )
     )
+
+  #+ validate ----  
+  pl_margin_err <- pl_duur %>% 
+    filter(str_detect(vulling, "rood|geel")) %>% 
+    select(playlist, vulling)
   
+  if(nrow(pl_margin_err) > 0) {
+    err_blokken <- unite(data = pl_margin_err, col = regel, sep = " ")
+    flog.info("Rode blokken zijn langer -, gele korter dan afgesproken: %s\nPlease comply or explain!", 
+              err_blokken, name = "nipperlog")
+    break
+  }
+  
+  # + = = = = = = = = = = = = = = = = = = = = = = = = = ----
   # get the tracks ----
   nipper_tracks <- readRDS("resources/nipper_tracks.rds") %>% distinct
   
@@ -152,14 +170,15 @@ for (seg1 in 1:1) { # create break-able segment
            uzm_locatie = paste0(home_fonotheek, uzm_locatie),
            uzm_locatie = str_replace_all(uzm_locatie, pattern = "\\%2F", replacement = "/"))
            
-  # compile the RL-playlist ----
   programma_sleutels <- tbl_nipper_keys
   audio_locaties <- tbl_nipper_audiolocaties
 
+  # start compiling ----
+  #+ RL-playlists ----
   source("src/compile_schedulerscript.R", encoding = "UTF-8")
-  
+
   for (cur_pl in pl_nieuw$playlist) {
-    # cur_pl <- "20190215_vr07.180_ochtendeditie"
+    #tst# cur_pl <- "20190215_vr07.180_ochtendeditie"
     duration_rlprg <- 3600L * as.numeric(str_sub(cur_pl, 15, 17)) / 60L
     
     cur_duur <- pl_duur %>% filter(playlist == cur_pl) %>% 
@@ -232,24 +251,19 @@ for (seg1 in 1:1) { # create break-able segment
     
     flog.info("RL-playlist toegevoegd: %s", rlprg_file_name, name = "nipperlog")
     
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-    # scheduler-script samenstellen
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    #+ RL-scheduler scripts ----
     build_rl_script(cur_pl)
     
     flog.info("RL-schedulerscript toegevoegd voor %s", cur_pl, name = "nipperlog")
   }
 
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Draaiboeken en gids samenstellen
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  #+ presentation scripts ----
   source("src/compile_hostscript_docx.R", encoding = "UTF-8")  
+  
+  #+ website posts ----
   source("src/update_gids.R", encoding = "UTF-8")
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  # Nieuwe playlists afstempelen met aanmaakdatum. gs_edit_cells zou dat in 1 keer kunnen doen, mits de
-  # rijen 1 aaneengesloten blok vormen - wat niet per se zo is bij nieuwe playlists in het GD-tabblad
-  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # mark NE-entries as completed ----
   pl_anchor <- pl_nieuw %>% select(anchor)
   samengesteld_op <- today(tzone = "Europe/Amsterdam")
   
@@ -259,12 +273,10 @@ for (seg1 in 1:1) { # create break-able segment
   }
 }
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-# Start RL-scheduler op de mac, zodat de nieuwe scripts ingelezen worden
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# restart RL-scheduler ----
 switch <- read_lines(file = switch_home)
 switch <- "start RL-scheduler"
 write_lines(switch, path = switch_home, append = FALSE)
-flog.info("RL-scheduler draait weer", name = "nipperlog")
 
+flog.info("RL-scheduler draait weer", name = "nipperlog")
 flog.info("= = = = = NIPPER stop = = = = =", name = "nipperlog")

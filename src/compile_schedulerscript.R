@@ -3,76 +3,83 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 build_rl_script <- function(playlist) {
-  # playlist <- "20181118_zo10.060_een_vroege_wandeling"
+  build_rl_script_task(playlist)
+  
+}
+
+build_rl_script_task <- function(playlist) {
+  # !TEST! # playlist <- "20181118_zo10.060_een_vroege_wandeling"
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   # Info types samenstellen - zie tabblad "schedule_radiologik"
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   # const_0
-  sch01_C0 <- "Radiologik Schedule Segment" %>% as_tibble
+  sch01_C0 <- "Radiologik Schedule Segment" %>% tibble::enframe(name = NULL)
   
   # dag
-  sch01_dag <- rls_dagletters(playlist) %>% as_tibble  
+  sch01_dag <- rls_dagletters(playlist) %>% tibble::enframe(name = NULL)  
   
   # lengte
-  sch01_lengte <- rls_lengte(playlist) %>% as_tibble
+  sch01_lengte <- rls_lengte(playlist) %>% tibble::enframe(name = NULL)
   
   # dj_voorkeur
-  sch01_dj_voorkeur <- "standaard" %>% as_tibble
+  sch01_dj_voorkeur <- "standaard" %>% tibble::enframe(name = NULL)
   
   # stuur_naar_dj
-  sch01_stuur_naar_dj <- "ProgramTo=0" %>% as_tibble
+  sch01_stuur_naar_dj <- "ProgramTo=0" %>% tibble::enframe(name = NULL)
   
   # start
-  sch01_start <- rls_30m_blokken(playlist) %>% as_tibble
+  sch01_start <- rls_30m_blokken(playlist) %>% tibble::enframe(name = NULL)
   
   # const_4
-  sch01_C4 <- "0" %>% as_tibble
+  sch01_C4 <- "0" %>% tibble::enframe(name = NULL)
   
   # leeg_1
-  sch01_leeg_1 <- "" %>% as_tibble
+  sch01_leeg_1 <- "" %>% tibble::enframe(name = NULL)
   
   # venster_van en -tot
   v_limiet <- rls_venster(playlist)
-  sch01_venster_van <- paste(v_limiet[1], "0", sep = "\t") %>% as_tibble 
-  sch01_venster_tot <- paste(v_limiet[2], "0", sep = "\t") %>% as_tibble
+  sch01_venster_van <- paste(v_limiet[1], "0", sep = "\t") %>% tibble::enframe(name = NULL) 
+  sch01_venster_tot <- paste(v_limiet[2], "0", sep = "\t") %>% tibble::enframe(name = NULL)
   
   # const_8
-  sch01_C8 <- "ProgramCopyPath=nopath" %>% as_tibble
+  sch01_C8 <- "ProgramCopyPath=nopath" %>% tibble::enframe(name = NULL)
   
   # color
-  sch01_color <- "ColorLabel=238,238,153" %>% as_tibble
+  sch01_color <- "ColorLabel=238,238,153" %>% tibble::enframe(name = NULL)
   
   # const_10
-  sch01_const_10 <- "0" %>% as_tibble
+  sch01_const_10 <- "0" %>% tibble::enframe(name = NULL)
   
   # leeg_2
-  sch01_leeg_2 <- "" %>% as_tibble
+  sch01_leeg_2 <- "" %>% tibble::enframe(name = NULL)
   
   # const_12
-  sch01_const_12 <- "Display=True" %>% as_tibble
+  sch01_const_12 <- "Display=True" %>% tibble::enframe(name = NULL)
   
   # const_13
-  sch01_const_13 <- "PlayRotatediniTunes=False" %>% as_tibble
+  sch01_const_13 <- "PlayRotatediniTunes=False" %>% tibble::enframe(name = NULL)
   
   # const_14
-  sch01_const_14 <- "Notes=" %>% as_tibble
+  sch01_const_14 <- "Notes=" %>% tibble::enframe(name = NULL)
   
   # const_15
-  sch01_const_15 <- paste("PrePostAppleScripts=", "", sep = "\t") %>% as_tibble
+  sch01_const_15 <- paste("PrePostAppleScripts=", "", sep = "\t") %>% tibble::enframe(name = NULL)
   
   # const_16
-  sch01_const_16 <- "AlbumSeparation=0" %>% as_tibble
+  sch01_const_16 <- "AlbumSeparation=0" %>% tibble::enframe(name = NULL)
   
   # const_17
-  sch01_const_17 <- "Begin Script" %>% as_tibble
+  sch01_const_17 <- "Begin Script" %>% tibble::enframe(name = NULL)
   
   # load
   rlprg_file <- paste0(playlist, ".rlprg")
-  sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
+  sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% 
+    tibble::enframe(name = NULL)
   
   # aanvulling (aanvullijst bevat altijd maar 1 stuk)
   sch01_play <- paste("pick", "", "",          "",          "r",
-                      "nipper_aanvullen_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% as_tibble
+                      "nipper_aanvullen_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% 
+    tibble::enframe(name = NULL)
   
   script_file <- bind_rows(sch01_C0,
                            sch01_dag,
@@ -101,8 +108,18 @@ build_rl_script <- function(playlist) {
   # zet de startscripts voor de playlists in de schedules-map van RL, naam begint met
   # een volgnummer: 1 + <aantal scripts in deze map>
   home_radiologik_schedules <- paste0(home_prop("home_radiologik"), "Schedule/")
-  nrow_schedules <- 1L + dir_ls(path = home_radiologik_schedules) %>% as_tibble %>% nrow
-  script_file_name <- sprintf(paste0(home_radiologik_schedules, "%03d - ", playlist), nrow_schedules)
+  nrow_schedules <- 1L + dir_ls(path = home_radiologik_schedules) %>% 
+    tibble::enframe(name = NULL) %>% 
+    nrow
+  
+  script_file_name <- sprintf(paste0(home_radiologik_schedules, 
+                                     "%03d - ", 
+                                     paste0(str_sub(playlist, 1, 4),
+                                            "-",
+                                            str_sub(playlist, 5, 6),
+                                            "-",
+                                            str_sub(playlist, 7))),
+                              nrow_schedules)
   write.table(x = script_file, file = script_file_name, row.names = FALSE, col.names = FALSE, 
               sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
 }
@@ -134,7 +151,7 @@ rls_30m_blokken <- function(some_playlist){
 rls_venster <- function(some_playlist) {
   # some_playlist <- "20181231_wo00.420_de_nacht_klassiek"
   venster_datum_start <- str_sub(some_playlist, 1, 8) %>% ymd
-  venster_datum_stop <- venster_datum_start + days(8)
+  venster_datum_stop <- venster_datum_start + days(1)
   rl_date_fmt <- stamp_date("23 mrt. 2018")
   venster_datum_start %<>% rl_date_fmt %>% str_replace(pattern = "mei\\.", replacement = "mei ")
   venster_datum_stop %<>% rl_date_fmt %>% str_replace(pattern = "mei\\.", replacement = "mei ")
