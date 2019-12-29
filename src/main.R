@@ -154,7 +154,7 @@ for (seg1 in 1:1) { # create break-able segment
   
   if(nrow(pl_margin_err) > 0) {
     err_blokken <- unite(data = pl_margin_err, col = regel, sep = " ")
-    flog.info("Rode blokken zijn langer -, gele korter dan afgesproken: %s\nPlease comply or explain!", 
+    flog.info("Sommige playlists zijn te kort of te lang.\n%s", 
               err_blokken, name = "nipperlog")
     break
   }
@@ -176,9 +176,10 @@ for (seg1 in 1:1) { # create break-able segment
   # start compiling ----
   #+ RL-playlists ----
   source("src/compile_schedulerscript.R", encoding = "UTF-8")
-
+  source("src/shared_functions.R", encoding = "UTF-8")
+  
   for (cur_pl in pl_nieuw$playlist) {
-    #tst# cur_pl <- "20190215_vr07.180_ochtendeditie"
+    # !TEST! # cur_pl <- "20200703_ma07.180_ochtendeditie"
     duration_rlprg <- 3600L * as.numeric(str_sub(cur_pl, 15, 17)) / 60L
     
     cur_duur <- pl_duur %>% filter(playlist == cur_pl) %>% 
@@ -191,8 +192,13 @@ for (seg1 in 1:1) { # create break-able segment
     rlprg_file <- bind_rows(cur_duur) # , cur_tune)
     
     blokken <- pl_tracks %>% filter(playlist == cur_pl) %>% distinct(vt_blok_letter) 
+    
     slot_letter <- LETTERS[1 + nrow(blokken)]
-    slot <- slot_letter %>% as_tibble %>% setNames("vt_blok_letter")
+    
+    slot <- slot_letter %>% 
+      tibble::enframe(name = NULL) %>% 
+      setNames("vt_blok_letter")
+    
     blokken %<>% bind_rows(slot) 
     
     playlist_id <- pl_nieuw %>% filter(playlist == cur_pl) %>% select(playlist_id) %>% slice(1)
@@ -202,7 +208,8 @@ for (seg1 in 1:1) { # create break-able segment
       select(locatie) 
 
     for (blok in blokken$vt_blok_letter) {
-      cur_pres <- cur_pl %>% as_tibble %>% 
+      cur_pres <- cur_pl %>% 
+        tibble::enframe(name = NULL) %>% 
         mutate(
           duur = "",
           audiofile = paste0("file://", vt_blok_pad, playlist_id, "_", match(blok, LETTERS), ".aif"),
@@ -256,32 +263,37 @@ for (seg1 in 1:1) { # create break-able segment
     
     flog.info("RL-schedulerscript toegevoegd voor %s", cur_pl, name = "nipperlog")
     
-    #+ RL-scripts OE recycled replay ----
+    #+ RL-scripts to play recycled OE's ---- 
+    # For this, 'build_rl_script' needs 2 arguments: a playlist A, having the
+    # required play date; and a playlist B, having the OE-episode to be
+    # recycled. Playlist A will be artificial, as there is no GD-selection for
+    # it.
+    
     for (seg_oe_a in 1:1) {
-      # !TEST! # cur_pl <- "20200110_vr07-180_ochtendeditie.rlprg"
+      # !TEST! # cur_pl <- "20200106_ma07-180_ochtendeditie"
       
-      if (!str_detect(string = cur_pl, pattern = "_ochtendeditie\\.rlprg$")){
+      if (!str_detect(string = cur_pl, pattern = "_ochtendeditie")){
         break
       }
       
-      #+ . get repo date ----
-      # (repo = replay post) more info: update_gids.R
-      replay_date_cur_pl <- playlist2postdate(cur_pl) + days(7)
-      
-      repo_offset <- if_else(str_detect(string = cur_pl, pattern = "_(ma|di|wo|do)\\d"), 175L, 182L) 
-      recycle_post_ts <- replay_date_cur_pl - days(repo_offset)
-      
-      # use 178 day offset if replay post date is 2020-01-06 or later
-      recycle_post_ts <- if_else(recycle_post_ts >= ymd_hms("2020-01-06 07:00:00"),
-                                 replay_date_cur_pl - days(178L),
-                                 recycle_post_ts
-      )
-      
-      recycle_pl.dt <- str_sub(recycle_post_ts, 1, 10) %>% str_replace_all("-", "")
-      recycle_pl.day_name <- str_sub(cur_pl, 10, 11)
-      recycle_pl <- paste0(recycle_pl.dt, "_", recycle_pl.day_name, "07-180_ochtendeditie")
+      #+ . set dummy pl_name ----
+      # required play date is cur_pl_date + 7 days. 
+      cur_pl_date <- playlist2postdate(cur_pl)
+      stamped_format <- stamp("20190229_zo")
+      dummy_pl <- paste0(stamped_format(cur_pl_date + days(7L)),
+                         "07-180_ochtendeditie")
 
-      oe_pl_set <- c(cur_pl, recycle_pl)
+      #+ . set OE-episode pl_name ----
+      # details are on GD: kringloopherhalingen ochtendeditie
+      oe_offset <- 
+        case_when(cur_pl_date >= ymd_hms("2020-06-22 07:00:00")              ~ 175L,
+                  str_detect(string = cur_pl, pattern = "_(ma|di|wo|do)\\d") ~ 175L, 
+                  TRUE                                                       ~ 182L)
+      
+      oe_pl <- paste0(stamped_format(cur_pl_date + days(7L) - days(oe_offset)),
+                      "07-180_ochtendeditie")
+      
+      oe_pl_set <- c(dummy_pl, oe_pl)
       build_rl_script(oe_pl_set)
     }
   }
@@ -296,10 +308,10 @@ for (seg1 in 1:1) { # create break-able segment
   pl_anchor <- pl_nieuw %>% select(anchor)
   samengesteld_op <- today(tzone = "Europe/Amsterdam")
   
-  for (a1 in 1:nrow(pl_nieuw)) {
-    cur_anchor <- pl_anchor[a1, ] %>% as.character
-    gs_edit_cells(gd_nip_xpr, ws = "playlists", anchor = cur_anchor, input = samengesteld_op)
-  }
+  # for (a1 in 1:nrow(pl_nieuw)) {
+  #   cur_anchor <- pl_anchor[a1, ] %>% as.character
+  #   gs_edit_cells(gd_nip_xpr, ws = "playlists", anchor = cur_anchor, input = samengesteld_op)
+  # }
 }
 
 # restart RL-scheduler ----

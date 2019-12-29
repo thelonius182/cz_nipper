@@ -6,8 +6,7 @@ build_rl_script <- function(arg_playlist) {
   # !TEST! # 
   # arg_playlist <- c("20200106_ma07.180_ochtendeditie",         # the playlist made in NipperExpress
   #                   "20181118_zo10.060_een_vroege_wandeling")  # the playlist to use as replay
-  # !TEST! # 
-  arg_playlist <- c("20181118_zo10.060_een_vroege_wandeling")
+  # !TEST! # arg_playlist <- c("20200106_ma07.180_ochtendeditie")
   
   playlist <- arg_playlist[1];
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

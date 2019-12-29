@@ -1,42 +1,4 @@
-playlist2postdate <- function(playlist) {
-  # TEST! # playlist <- "20200106_ma07.180_ochtendeditie"
-  tmp_date <- playlist %>% str_sub(0, 8)
-  tmp_time <- playlist %>% str_sub(12, 13) %>% paste0(":00:00")
-  result <- paste0(tmp_date, " ", tmp_time) %>% ymd_hms
-}
-
-get_wallclock <- function(pm_cum_tijd, pm_playlist) {
-  cum_tijd_ts <- paste0("2019-01-01 ", pm_cum_tijd) %>% ymd_hms
-  start_clock <- pm_playlist %>% str_sub(12, 13) %>% as.integer
-  wallclcok_ts <- cum_tijd_ts + hours(start_clock)
-  wallclock_ts_rounded <- wallclcok_ts %>% round_date("minute")
-  wallclock <- wallclock_ts_rounded %>% as.character %>% str_sub(12, 16)
-}
-
-get_wp_conn <- function() {
-  db_type <- "prd"
-  if (config$host == "logmac") {
-    db_type <- "dev"
-  }
-  db_host <- key_get(service = paste0("sql-wp", db_type, "_host"))
-  db_user <- key_get(service = paste0("sql-wp", db_type, "_user"))
-  db_password <- key_get(service = paste0("sql-wp", db_type, "_pwd"))
-  db_name <- key_get(service = paste0("sql-wp", db_type, "_db"))
-  db_port <- 3306
-  db_table <- "cz.wp_posts"
-  flog.appender(appender.file("/Users/nipper/Logs/nipper.log"), name = "nipperlog")
-  
-  result <- tryCatch( {
-      grh_conn <- dbConnect(drv = MySQL(), user = db_user, password = db_password,
-                            dbname = db_name, host = db_host, port = db_port)
-    },
-    error = function(cond) {
-      flog.error("Wordpress database onbereikbaar (dev: check PuTTY)", name = "nipperlog")
-      return("connection-error")
-    }
-  )
-  return(result)
-}
+source("src/shared_functions.R", encoding = "UTF-8")
 
 for (seg2 in 1:1) {
   # Connect to database ----
@@ -50,7 +12,7 @@ for (seg2 in 1:1) {
   
   # set post data ----
   dummy_vt <- pl_werken %>% filter(vt_blok_nr == 1) %>% 
-    mutate(vt_blok_nr = 0, lengte = hms::as.hms(40))
+    mutate(vt_blok_nr = 0, lengte = hms::as_hms(40))
   
   drb_gids <- rbind(pl_werken, dummy_vt) %>%
     arrange(playlist, vt_blok_letter, vt_blok_nr) %>% group_by(playlist) %>%
@@ -141,58 +103,62 @@ for (seg2 in 1:1) {
       dbGetQuery(wp_conn, upd_stmt02)
       
       #....+ add image & update ----
-      upd_stmt03 <- sprintf(
-        "insert into wp_postmeta (post_id, meta_key, meta_value) values(%i, '_thumbnail_id', %i);",
-        dsSql01$id[u1],
-        463848
-      )
-      
-      dbGetQuery(wp_conn, upd_stmt03)
+      # upd_stmt03 <- sprintf(
+      #   "insert into wp_postmeta (post_id, meta_key, meta_value) values(%i, '_thumbnail_id', %i);",
+      #   dsSql01$id[u1],
+      #   463848
+      # )
+      # 
+      # dbGetQuery(wp_conn, upd_stmt03)
     }
     
-    #....+ prepare OE recycled replay ----
+    #....+ replace replay-posts with recycled OE's ---- 
     for (seg_oe in 1:1) {
-      # !TEST! # cur_pl <- "20200110_vr07-180_ochtendeditie.rlprg"
+      # !TEST! # cur_pl <- "20200112_zo07-180_ochtendeditie"
       
-      if (!str_detect(string = cur_pl, pattern = "_ochtendeditie\\.rlprg$")){
+      if (!str_detect(string = cur_pl, pattern = "_ochtendeditie")){
         break
       }
       
-      #....+ + get repo date ----
-      # (repo = replay post)
-      # if new playlist has date X, it's replay is 7 days later. The playlist to replay is to be the one
-      # 175 days earlier, or 182 (to resolve the fr-th order of replays, before 2020-01-06)
-      # NB! once recycling reaches 2020-01-06, all weeks start Mo's so a single offset of 178 days suffices.
+      #....+ . get recycle-OE's date ----
+      # details are on GD: kringloopherhalingen ochtendeditie
+      cur_pl_date <- playlist2postdate(cur_pl)
       
-      replay_date_cur_pl <- playlist2postdate(cur_pl) + days(7)
+      replay_date <- cur_pl_date + days(7)
       
-      repo_offset <- if_else(str_detect(string = cur_pl, pattern = "_(ma|di|wo|do)\\d"), 175L, 182L) 
-      recycle_post_ts <- replay_date_cur_pl - days(repo_offset)
+      oe_offset <- 
+        case_when(cur_pl_date >= ymd_hms("2020-06-22 07:00:00")              ~ 175L,
+                  str_detect(string = cur_pl, pattern = "_(ma|di|wo|do)\\d") ~ 175L, 
+                  TRUE                                                       ~ 182L)
       
-      # use 178 day offset if replay post date is 2020-01-06 or later
-      recycle_post_ts <- if_else(recycle_post_ts >= ymd_hms("2020-01-06 07:00:00"),
-                                 replay_date_cur_pl - days(178L),
-                                 recycle_post_ts
+      oe_date <- replay_date - days(oe_offset)
+      
+      flog.info("Kringloopherhaling: op %s klinkt die van %s", 
+                replay_date, oe_date, name = "nipperlog")
+      
+      #....+ . get replay_date's post-id ----
+      upd_stmt06 <- sprintf(
+        "select min(id) from wp_posts where post_date = '%s' and post_type = 'programma';",
+        replay_date
       )
       
-      flog.info("Recycling an RL-playlist for %s, using %s", 
-                replay_date_cur_pl, recycle_post_ts, name = "nipperlog")
+      replay_pgm_id <- dbGetQuery(wp_conn, upd_stmt06)
       
-      #....+ + get recycle post id ----
+      #....+ . get recycle-OE's post-id ----
       upd_stmt04 <- sprintf(
         "select min(id) from wp_posts where post_date = '%s' and post_type = 'programma';",
-        as.character(recycle_post_ts)
+        oe_date
       )
       
-      repo_pgm_id <- dbGetQuery(wp_conn, upd_stmt04) # starts with NL
-      pgm_id <- min(dsSql01)
-      
+      oe_pgm_id <- dbGetQuery(wp_conn, upd_stmt04) 
+
+      #....+ . update post-id's NL/EN ----
       for (r1 in 1:2) {
         upd_stmt05 <-
           sprintf(
             "update wp_postmeta set meta_value = %s where post_id = %s and meta_key = 'pr_metadata_orig';",
-            repo_pgm_id + r1 - 1L,
-            pgm_id + r1 - 1L
+            oe_pgm_id + r1 - 1L,
+            replay_pgm_id + r1 - 1L
           )
         
         flog.info("SQL: %s", upd_stmt05, name = "nipperlog")
