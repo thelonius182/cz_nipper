@@ -2,13 +2,14 @@
 # Compile scheduler script
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
-build_rl_script <- function(playlist) {
-  build_rl_script_task(playlist)
+build_rl_script <- function(arg_playlist) {
+  # !TEST! # 
+  # arg_playlist <- c("20200106_ma07.180_ochtendeditie",         # the playlist made in NipperExpress
+  #                   "20181118_zo10.060_een_vroege_wandeling")  # the playlist to use as replay
+  # !TEST! # 
+  arg_playlist <- c("20181118_zo10.060_een_vroege_wandeling")
   
-}
-
-build_rl_script_task <- function(playlist) {
-  # !TEST! # playlist <- "20181118_zo10.060_een_vroege_wandeling"
+  playlist <- arg_playlist[1];
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   # Info types samenstellen - zie tabblad "schedule_radiologik"
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -72,7 +73,11 @@ build_rl_script_task <- function(playlist) {
   sch01_const_17 <- "Begin Script" %>% tibble::enframe(name = NULL)
   
   # load
-  rlprg_file <- paste0(playlist, ".rlprg")
+  rlprg_file <- paste0(if_else(is.na(arg_playlist[2]), 
+                               playlist, 
+                               arg_playlist[2]), 
+                       ".rlprg")
+  
   sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% 
     tibble::enframe(name = NULL)
   
@@ -118,8 +123,12 @@ build_rl_script_task <- function(playlist) {
                                             "-",
                                             str_sub(playlist, 5, 6),
                                             "-",
-                                            str_sub(playlist, 7))),
-                              nrow_schedules)
+                                            str_sub(playlist, 7)
+                                     )
+                              ),
+                              nrow_schedules) %>% 
+    str_replace_all(pattern = "\\.", replacement = "-")
+  
   write.table(x = script_file, file = script_file_name, row.names = FALSE, col.names = FALSE, 
               sep = "\t", quote = FALSE, fileEncoding = "UTF-8") 
 }

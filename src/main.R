@@ -147,7 +147,7 @@ for (seg1 in 1:1) { # create break-able segment
            )
     )
 
-  #+ validate ----  
+  #+ break on margin errors ----  
   pl_margin_err <- pl_duur %>% 
     filter(str_detect(vulling, "rood|geel")) %>% 
     select(playlist, vulling)
@@ -251,10 +251,39 @@ for (seg1 in 1:1) { # create break-able segment
     
     flog.info("RL-playlist toegevoegd: %s", rlprg_file_name, name = "nipperlog")
     
-    #+ RL-scheduler scripts ----
+    #+ RL-scripts ----
     build_rl_script(cur_pl)
     
     flog.info("RL-schedulerscript toegevoegd voor %s", cur_pl, name = "nipperlog")
+    
+    #+ RL-scripts OE recycled replay ----
+    for (seg_oe_a in 1:1) {
+      # !TEST! # cur_pl <- "20200110_vr07-180_ochtendeditie.rlprg"
+      
+      if (!str_detect(string = cur_pl, pattern = "_ochtendeditie\\.rlprg$")){
+        break
+      }
+      
+      #+ . get repo date ----
+      # (repo = replay post) more info: update_gids.R
+      replay_date_cur_pl <- playlist2postdate(cur_pl) + days(7)
+      
+      repo_offset <- if_else(str_detect(string = cur_pl, pattern = "_(ma|di|wo|do)\\d"), 175L, 182L) 
+      recycle_post_ts <- replay_date_cur_pl - days(repo_offset)
+      
+      # use 178 day offset if replay post date is 2020-01-06 or later
+      recycle_post_ts <- if_else(recycle_post_ts >= ymd_hms("2020-01-06 07:00:00"),
+                                 replay_date_cur_pl - days(178L),
+                                 recycle_post_ts
+      )
+      
+      recycle_pl.dt <- str_sub(recycle_post_ts, 1, 10) %>% str_replace_all("-", "")
+      recycle_pl.day_name <- str_sub(cur_pl, 10, 11)
+      recycle_pl <- paste0(recycle_pl.dt, "_", recycle_pl.day_name, "07-180_ochtendeditie")
+
+      oe_pl_set <- c(cur_pl, recycle_pl)
+      build_rl_script(oe_pl_set)
+    }
   }
 
   #+ presentation scripts ----

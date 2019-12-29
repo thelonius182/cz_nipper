@@ -1,6 +1,7 @@
 playlist2postdate <- function(playlist) {
+  # TEST! # playlist <- "20200106_ma07.180_ochtendeditie"
   tmp_date <- playlist %>% str_sub(0, 8)
-  tmp_time <- playlist %>% str_sub(11, 13) %>% paste0(":00:00")
+  tmp_time <- playlist %>% str_sub(12, 13) %>% paste0(":00:00")
   result <- paste0(tmp_date, " ", tmp_time) %>% ymd_hms
 }
 
@@ -38,15 +39,16 @@ get_wp_conn <- function() {
 }
 
 for (seg2 in 1:1) {
-  # Connect to database -----------------------------------------------------
+  # Connect to database ----
   wp_conn <- get_wp_conn()
   
   # connection type S4 indicates a valid connection; other types indicate failure
   if (typeof(wp_conn) != "S4") { 
+    flog.error("Nipper: invalid db-connection (non-S4)", name = "nipperlog")
     break
   }
   
-  # gidsgegevens klaarzetten ------------------------------------------------
+  # set post data ----
   dummy_vt <- pl_werken %>% filter(vt_blok_nr == 1) %>% 
     mutate(vt_blok_nr = 0, lengte = hms::as.hms(40))
   
@@ -63,21 +65,31 @@ for (seg2 in 1:1) {
     ) %>% filter(vt_blok_nr != 0) %>% 
     select(-bezetting, -album, -opnameNr, -starts_with("vt_"))
   
-  # update gids -------------------------------------------------------------
-  
+  # for each playlist ----
   for (cur_pl in pl_nieuw$playlist) {
+    
+    #+ set post date ----
     sql_post_date <- playlist2postdate(cur_pl) %>% as.character
     drb_gids_pl <- drb_gids %>% filter(playlist == cur_pl)
     
+    #+ set intro ----
     koptekst <- drb_gids_pl %>% select(playlist, componist_lbl) %>% distinct %>% 
       group_by(playlist) %>% summarise(werken_van = paste(componist_lbl, collapse = ", "))
+    
     regel <- sprintf('Werken van %s.\n<!--more-->\n', koptekst$werken_van)
+    
+    #+... escape the string ----
     sql_gidstekst <- paste0(dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
     
     regel <- '<style>td {padding: 6px; text-align: left;}</style>\n<table style="width: 100%;"><tbody>'
+    
+    #+... add to post lines ----
     sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
     
+    #+ + for each track ----
     for (q1 in 1:nrow(drb_gids_pl)) {
+      
+      #+ +... set time ----
       regel <-
         sprintf(
           '<tr>\n<td>[track tijd="%s" text="%s %s"]\n<span>',
@@ -85,45 +97,114 @@ for (seg2 in 1:1) {
           drb_gids_pl$wallclock[q1],
           drb_gids_pl$titel[q1]
         )
+      
+      #+ +... add to post lines ----
       sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)))
       
+      #+ +... set composer ----
       regel <- drb_gids_pl$componist_lbl[q1]
+      
+      #+ +... add to post lines ----
       sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
       
+      #+ +... set artists ----
       regel <- sprintf('%s</span></td>\n</tr>',
                        drb_gids_pl$uitvoerenden[q1])
+      
+      #+ +... add to post lines ----
       sql_gidstekst <-
         paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
     }
     
+    #....+ add spacer ----
     regel <- '</tbody>\n</table>'
+    
+    #....+ add to post lines ----
     sql_gidstekst <- paste0(sql_gidstekst, dbEscapeStrings(wp_conn, enc2native(regel)), "\n")
     
+    #....+ get WP-post-id's NL/EN ----
     upd_stmt01 <- sprintf(
       "select id from wp_posts where post_date = '%s' and post_type = 'programma';",
       sql_post_date
     )
+    
     dsSql01 <- dbGetQuery(wp_conn, upd_stmt01)
     
+    #....+ update posts ----
     for (u1 in 1:nrow(dsSql01)) {
       upd_stmt02 <- sprintf(
         "update wp_posts set post_content = '%s' where id = %i;",
         sql_gidstekst,
         dsSql01$id[u1]
       )
+      
       dbGetQuery(wp_conn, upd_stmt02)
       
+      #....+ add image & update ----
       upd_stmt03 <- sprintf(
         "insert into wp_postmeta (post_id, meta_key, meta_value) values(%i, '_thumbnail_id', %i);",
         dsSql01$id[u1],
         463848
       )
+      
       dbGetQuery(wp_conn, upd_stmt03)
+    }
+    
+    #....+ prepare OE recycled replay ----
+    for (seg_oe in 1:1) {
+      # !TEST! # cur_pl <- "20200110_vr07-180_ochtendeditie.rlprg"
+      
+      if (!str_detect(string = cur_pl, pattern = "_ochtendeditie\\.rlprg$")){
+        break
+      }
+      
+      #....+ + get repo date ----
+      # (repo = replay post)
+      # if new playlist has date X, it's replay is 7 days later. The playlist to replay is to be the one
+      # 175 days earlier, or 182 (to resolve the fr-th order of replays, before 2020-01-06)
+      # NB! once recycling reaches 2020-01-06, all weeks start Mo's so a single offset of 178 days suffices.
+      
+      replay_date_cur_pl <- playlist2postdate(cur_pl) + days(7)
+      
+      repo_offset <- if_else(str_detect(string = cur_pl, pattern = "_(ma|di|wo|do)\\d"), 175L, 182L) 
+      recycle_post_ts <- replay_date_cur_pl - days(repo_offset)
+      
+      # use 178 day offset if replay post date is 2020-01-06 or later
+      recycle_post_ts <- if_else(recycle_post_ts >= ymd_hms("2020-01-06 07:00:00"),
+                                 replay_date_cur_pl - days(178L),
+                                 recycle_post_ts
+      )
+      
+      flog.info("Recycling an RL-playlist for %s, using %s", 
+                replay_date_cur_pl, recycle_post_ts, name = "nipperlog")
+      
+      #....+ + get recycle post id ----
+      upd_stmt04 <- sprintf(
+        "select min(id) from wp_posts where post_date = '%s' and post_type = 'programma';",
+        as.character(recycle_post_ts)
+      )
+      
+      repo_pgm_id <- dbGetQuery(wp_conn, upd_stmt04) # starts with NL
+      pgm_id <- min(dsSql01)
+      
+      for (r1 in 1:2) {
+        upd_stmt05 <-
+          sprintf(
+            "update wp_postmeta set meta_value = %s where post_id = %s and meta_key = 'pr_metadata_orig';",
+            repo_pgm_id + r1 - 1L,
+            pgm_id + r1 - 1L
+          )
+        
+        flog.info("SQL: %s", upd_stmt05, name = "nipperlog")
+        
+        dbGetQuery(wp_conn, upd_stmt05)
+      }
     }
     
     flog.info("Gids bijgewerkt: %s", cur_pl, name = "nipperlog")
   }
   
+  #.... disconnect from db ----
   on.exit(dbDisconnect(wp_conn))
 }
 # a_post_date <- "2019-01-01 17:00:00"
