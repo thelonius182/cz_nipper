@@ -18,11 +18,8 @@ for (seg2 in 1:1) {
     arrange(playlist, vt_blok_letter, vt_blok_nr) %>% group_by(playlist) %>%
     mutate(
       cum_tijd = np_sec2hms(cumsum(as.duration(lengte))),
-      # cum_tijd_secs = seconds(cumsum(as.duration(lengte)) %% 60),
-      # cum_tijd_secs2min = ifelse(cum_tijd_secs > 30, 1, 0),
       cum_tijd = lag(cum_tijd, n = 1),
-      # cum_tijd_secs = lag(cum_tijd_secs, n = 1),
-      # cum_tijd_secs2min = lag(cum_tijd_secs2min, n = 1)
+      cum_tijd = if_else(is.na(cum_tijd), "00:00:00", cum_tijd),
       wallclock = get_wallclock(pm_cum_tijd = cum_tijd, pm_playlist = playlist)
     ) %>% filter(vt_blok_nr != 0) %>% 
     select(-bezetting, -album, -opnameNr, -starts_with("vt_"))
@@ -173,49 +170,3 @@ for (seg2 in 1:1) {
   #.... disconnect from db ----
   on.exit(dbDisconnect(wp_conn))
 }
-# a_post_date <- "2019-01-01 17:00:00"
-  # 
-  # gidstekst <- paste("Werken van Haydn, Grieg en Goebajdoelina<!--more--><br>\n",
-  #                    "<em>[track tijd=\"01:49\" text=\"01:49 - Sofia Goebajdoelina: Hell und Dunkel\"]</em>",
-  #                    "German: Falsches Üben von Xylophonmusik quält jeden größeren Zwerg.",
-  #                    "Koninklijke Academie voor Muziek te Kopenhagen. \nHij is wat je noemt “een groot pleitbezorger van hedendaagse muziek”.<br>",
-  #                    "<em>[track tijd=\"23:46\" text=\"23:46 - Sofia Goebajdoelina: Hell und Dunkel\"]</em>",
-  #                    "Finnish: (5) Törkylempijävongahdus\nPolish: Pchnąć w tę łódź jeża lub osiem skrzyń fig.<br>",
-  #                    "<em>[track tijd=\"45:19\" text=\"45:19 - Sofia Goebajdoelina: Hell und Dunkel\"]</em>",
-  #                    "Finnish: (5) Törkylempijävongahdus\nPolish: Pchnąć w tę łódź jeża lub osiem skrzyń fig.\n",
-  #                    "Esperanto: Eĥoŝanĝo ĉiuĵaŭde.\n",
-  #                    "Euro Symbol: €."
-  # ) 
-  
-  # mydb <-  dbConnect(drv = MySQL(), user = db_user, password = db_password,
-  # dbname = db_name, host = db_host, port = db_port)
-# tmp <- sprintf("SELECT * FROM emp WHERE lname = %s", "O'Reilly")
-# stmt <- "update wp_posts set post_content = 'Hello CZ-World trial!' where id = 405929;"
-# stmt <- sprintf("update wp_posts set post_content = '%s' where id = %s", content_upd, 405929)
-
-# stmt_esc <- dbEscapeStrings(mydb, stmt)
-# rs <- dbSendQuery(mydb, stmt)
-# 
-# 
-# df <-  fetch(rs, n = -1)
-# 
-# pd1 <- playlist2postdate(c("20181231_ma14.060_liederen", "20180213_ma14.060_liederen")) %>% as.character
-# = = = = = = = = = = = = = = = = = = = = = = = = wpProd = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
-# 1. Library
-# library(RMySQL)
-
-# 2. Settings
-# db_user <- key_get(service = "sql-wpprd_user")
-# db_password <- key_get(service = "sql-wpprd_pwd")
-# db_name <- key_get(service = "sql-wpprd_db")
-# db_host <-  key_get(service = "sql-wpprd_host")
-# db_port <- 3306
-# db_table <- "cz.wp_posts"
-
-# 3. Read data from db
-# mydb <-  dbConnect(MySQL(), user = db_user, password = db_password,
-# dbname = db_name, host = db_host, port = db_port)
-# s2 <- "SELECT * FROM wp_posts where lower(post_title) = 'ochtendeditie' and post_type = 'programma';"
-# rs2 <- dbSendQuery(mydb, s2)
-# df2 <-  fetch(rs2, n = -1)
-# on.exit(dbDisconnect(mydb))

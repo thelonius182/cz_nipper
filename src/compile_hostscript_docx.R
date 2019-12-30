@@ -1,11 +1,7 @@
 library(officer)
 library(magrittr)
 
-np_sec2hms <- function(duur_sec) {
-  result <- paste0("00:00:", duur_sec) %>% 
-    hms(roll = TRUE) 
-  result <- sprintf("%02d:%02d:%02d", result@hour, result@minute, result@.Data)
-}
+source("src/shared_functions.R", encoding = "UTF-8")
 
 draaiboek <- pl_werken %>%
   arrange(playlist, vt_blok_letter, vt_blok_nr)

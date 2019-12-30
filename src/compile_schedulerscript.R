@@ -157,7 +157,7 @@ rls_30m_blokken <- function(some_playlist){
 }
 
 rls_venster <- function(some_playlist) {
-  # some_playlist <- "20181231_wo00.420_de_nacht_klassiek"
+  # !TEST! # some_playlist <- "20181231_wo00.420_de_nacht_klassiek"
   venster_datum_start <- str_sub(some_playlist, 1, 8) %>% ymd
   venster_datum_stop <- venster_datum_start + days(1)
   rl_date_fmt <- stamp_date("23 mrt. 2018")

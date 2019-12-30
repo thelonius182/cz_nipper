@@ -298,7 +298,7 @@ for (seg1 in 1:1) { # create break-able segment
     }
   }
 
-  #+ presentation scripts ----
+  #+ showhost scripts ----
   source("src/compile_hostscript_docx.R", encoding = "UTF-8")  
   
   #+ website posts ----
