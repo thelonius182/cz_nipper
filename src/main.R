@@ -1,4 +1,4 @@
-# Create RL-playlists, -schedules, presentation scripts and website posts  ----
+# Create RL-playlists, -schedules, presentation scripts and website posts.  ----
 library(tidyr)
 library(knitr)
 library(rmarkdown)
