@@ -46,7 +46,7 @@ switch_home <- paste0(home_prop("home_schedulerswitch"), "/nipper_msg.txt")
 flog.info("RL-scheduler stoppen", name = "nipperlog")
 switch <- read_lines(file = switch_home)
 switch <- "stop RL-scheduler"
-write_lines(switch, path = switch_home, append = FALSE)
+write_lines(switch, file = switch_home, append = FALSE)
 
 Sys.sleep(time = 5)
 flog.info("RL-scheduler is gestopt", name = "nipperlog")
@@ -317,7 +317,7 @@ for (seg1 in 1:1) { # create break-able segment
 # restart RL-scheduler ----
 switch <- read_lines(file = switch_home)
 switch <- "start RL-scheduler"
-write_lines(switch, path = switch_home, append = FALSE)
+write_lines(switch, file = switch_home, append = FALSE)
 
 flog.info("RL-scheduler draait weer", name = "nipperlog")
 flog.info("= = = = = NIPPER stop = = = = =", name = "nipperlog")

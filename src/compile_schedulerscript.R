@@ -80,9 +80,17 @@ build_rl_script <- function(arg_playlist) {
   sch01_load <- paste("load", "", "", "", "", rlprg_file, "", "", "", "", "", "", "", sep = "\t") %>% 
     tibble::enframe(name = NULL)
   
-  # aanvulling (aanvullijst bevat altijd maar 1 stuk)
-  sch01_play <- paste("pick", "", "",          "",          "r",
-                      "nipper_aanvullen_klassiek", "", "", "", "", "", "", "", sep = "\t") %>% 
+  # aanvullingen (aanvullijst bevat steeds maar 1 stuk)
+  sch01_play_a <- paste("pick", "", "",          "",          "r",
+                        "nipper_aanvullen_klassiek_A", "", "", "", "", "", "", "", sep = "\t") %>% 
+    tibble::enframe(name = NULL)
+  
+  sch01_play_b <- paste("pick", "", "",          "",          "r",
+                        "nipper_aanvullen_klassiek_B", "", "", "", "", "", "", "", sep = "\t") %>% 
+    tibble::enframe(name = NULL)
+
+  sch01_play_c <- paste("pick", "", "",          "",          "r",
+                        "nipper_aanvullen_klassiek_C", "", "", "", "", "", "", "", sep = "\t") %>% 
     tibble::enframe(name = NULL)
   
   script_file <- bind_rows(sch01_C0,
@@ -106,7 +114,9 @@ build_rl_script <- function(arg_playlist) {
                            sch01_const_16,
                            sch01_const_17,
                            sch01_load,
-                           sch01_play
+                           sch01_play_a,
+                           sch01_play_b,
+                           sch01_play_c
   )
   
   # zet de startscripts voor de playlists in de schedules-map van RL, naam begint met
