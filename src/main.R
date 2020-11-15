@@ -58,10 +58,11 @@ for (seg1 in 1:1) { # create break-able segment
   source("src/get_google_czdata.R", encoding = "UTF-8")
   #+ repair length-field ----
   tbl_nipper_select.I <- tbl_nipper_select %>% 
-    mutate(lengte = duration(num = 3600L * hour(lengte) 
-                                 + 60L * minute(lengte) 
-                                 + 1L * second(lengte), 
-                             units = "second")) 
+    mutate(lengte = time_length(duration(num = 3600L * hour(lengte) 
+                                         + 60L * minute(lengte) 
+                                         + 1L * second(lengte), 
+                                         units = "second")) 
+    )
   
   # get playlists to broadcast ----
   # marked by sheet "playlists.samengesteld_op = NULL" 
